@@ -1,0 +1,92 @@
+/*
+Theme Name: WIZAD OS Holding
+Description: A single holding page for the private WIZAD OS install (os.wizad.ca), with a branded sign-in screen.
+Version: 0.1.0
+Requires at least: 6.4
+Requires PHP: 7.4
+Author: WIZAD
+License: Proprietary
+Text Domain: wizad-os-theme
+*/
+
+:root {
+	--bg: #F3F5F6;
+	--surface: #fff;
+	--ink: #1F2A31;
+	--mute: #556672;
+	--line: #D8DFE3;
+	--accent: #C51A84;
+	--accent-d: #A5126C;
+	--accent-ink: #fff;
+	--slate: #617482;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #11181C;
+		--surface: #192228;
+		--ink: #E9EEF0;
+		--mute: #9FB0B9;
+		--line: #2B3841;
+		--accent: #F06BB8;
+		--accent-d: #F472BE;
+		--accent-ink: #1A0F16;
+		--slate: #8A9BA8;
+	}
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font: 400 17px/1.6 "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+.hold {
+	min-height: 100%;
+	display: grid;
+	grid-template-rows: 1fr auto;
+	padding: 24px 16px;
+}
+.hold-main {
+	align-self: center;
+	justify-self: center;
+	width: 100%;
+	max-width: 520px;
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: 16px;
+	padding: 48px 40px 40px;
+}
+.hold-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+.hold-brand svg { width: 44px; height: 44px; flex: none; }
+.hold-brand .name { font: 700 22px/1 "Bricolage Grotesque", "Public Sans", sans-serif; letter-spacing: .02em; }
+.hold-brand .name span { color: var(--accent); }
+h1 {
+	font: 700 clamp(28px, 6vw, 36px)/1.15 "Bricolage Grotesque", "Public Sans", sans-serif;
+	margin: 0 0 12px;
+	letter-spacing: -.01em;
+}
+.hold-lede { color: var(--mute); margin: 0 0 32px; }
+.hold-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	background: var(--accent);
+	color: var(--accent-ink);
+	text-decoration: none;
+	font-weight: 600;
+	padding: 14px 24px;
+	border-radius: 10px;
+	transition: background .15s;
+}
+.hold-btn:hover, .hold-btn:focus-visible { background: var(--accent-d); }
+.hold-btn:focus-visible { outline: 3px solid var(--slate); outline-offset: 3px; }
+.hold-note { display: flex; gap: 8px; align-items: flex-start; margin: 32px 0 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--mute); font-size: 14px; }
+.hold-note svg { flex: none; margin-top: 3px; }
+.hold-note a, .hold-foot a { color: inherit; }
+.hold-foot { text-align: center; color: var(--mute); font-size: 13px; padding-top: 24px; }
+@media (max-width: 480px) {
+	.hold-main { padding: 32px 24px 28px; }
+	.hold-btn { width: 100%; justify-content: center; }
+}

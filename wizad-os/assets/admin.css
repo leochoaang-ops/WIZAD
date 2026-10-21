@@ -1,0 +1,56 @@
+.wos { --wos-ink: #1d2327; --wos-muted: #646970; --wos-line: #dcdcde; --wos-card: #fff; --wos-accent: #2271b1; --wos-warn: #996800; --wos-warn-bg: #fcf9e8; --wos-bad: #b32d2e; --wos-bad-bg: #fcf0f1; --wos-ok: #00a32a; }
+.wos .wos-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
+.wos .wos-kpi { background: var(--wos-card); border: 1px solid var(--wos-line); border-radius: 8px; padding: 12px 16px; }
+.wos .wos-kpi span { display: block; color: var(--wos-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.wos .wos-kpi strong { font-size: 22px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.wos .wos-kpi.is-alert { border-color: var(--wos-bad); background: var(--wos-bad-bg); }
+.wos .wos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.wos .wos-panel { background: var(--wos-card); border: 1px solid var(--wos-line); border-radius: 8px; padding: 4px 16px 16px; min-width: 0; }
+.wos .wos-panel h2 { font-size: 15px; }
+.wos .wos-list { margin: 0; }
+.wos .wos-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 10px; margin: 0; border-left: 3px solid transparent; border-bottom: 1px solid var(--wos-line); }
+.wos .wos-list li span { color: var(--wos-muted); }
+.wos .wos-list li.lvl-1 { border-left-color: var(--wos-warn); background: var(--wos-warn-bg); }
+.wos .wos-list li.lvl-2 { border-left-color: var(--wos-bad); background: var(--wos-bad-bg); }
+.wos .wos-small li { font-size: 12px; padding: 4px 8px; }
+.wos .wos-empty { color: var(--wos-ok); }
+.wos .wos-meter { height: 10px; background: #f0f0f1; border-radius: 5px; overflow: hidden; }
+.wos .wos-meter span { display: block; height: 100%; background: var(--wos-accent); }
+.wos .wos-meter.is-alert span { background: var(--wos-bad); }
+.wos .wos-filters { margin: 12px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.wos .wos-table td, .wos .wos-table th { font-variant-numeric: tabular-nums; }
+.wos tr.wos-late td { background: var(--wos-warn-bg); }
+.wos .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; background: #f0f0f1; font-size: 12px; }
+.wos .pill-paid { background: #edfaef; color: #005c12; }
+.wos .pill-sent { background: #f0f6fc; color: #0a4b78; }
+.wos .pill-void { text-decoration: line-through; }
+.wos .pill-tag { background: #f0f6fc; color: #0a4b78; }
+.wos .wos-delete { color: var(--wos-bad); margin-top: 8px; }
+
+/* Board */
+.wos .wos-board { display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; overflow-x: auto; }
+.wos .wos-col { background: #f6f7f7; border: 1px solid var(--wos-line); border-radius: 8px; padding: 8px; min-height: 200px; }
+.wos .wos-col h2 { font-size: 13px; margin: 4px 4px 8px; display: flex; justify-content: space-between; }
+.wos .wos-col h2 .count { color: var(--wos-muted); font-weight: 400; }
+.wos .wos-col-blocked { background: var(--wos-bad-bg); border-color: #f0b8b8; }
+.wos .wos-col-cards { min-height: 120px; }
+.wos .wos-col.is-over { outline: 2px dashed var(--wos-accent); }
+.wos .wos-card { background: var(--wos-card); border: 1px solid var(--wos-line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; cursor: grab; }
+.wos .wos-card.is-late { border-left: 3px solid var(--wos-warn); }
+.wos .wos-card.is-dragging { opacity: .5; }
+.wos .wos-card-title { display: block; font-weight: 600; color: var(--wos-ink); text-decoration: none; }
+.wos .wos-card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; color: var(--wos-muted); font-size: 12px; }
+.wos .wos-card-meta .late { color: var(--wos-bad); }
+.wos .wos-blocker { margin-top: 6px; font-size: 12px; color: var(--wos-bad); }
+.wos .wos-card-form { margin: 12px 0; }
+.wos .wos-card-form summary { list-style: none; }
+.wos .wos-inline-form { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; background: #fff; border: 1px solid var(--wos-line); border-radius: 8px; padding: 12px 16px; margin-top: 8px; }
+.wos .wos-inline-form label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--wos-muted); }
+.wos .wos-inline-form label.wide { flex-basis: 100%; }
+.wos .wos-inline-form p { flex-basis: 100%; margin: 4px 0 0; }
+
+@media (max-width: 782px) {
+	.wos .wos-board { grid-template-columns: repeat(4, 80vw); }
+	.wos .wos-grid { grid-template-columns: 1fr; }
+	.wos .wos-table { display: block; overflow-x: auto; }
+}
