@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WIZAD OS
  * Description: WIZAD's internal operating system: clients, deals, projects, Kanban, invoices and ledger. Built for a private install such as os.wizad.ca.
- * Version: 0.1.0
+ * Version: 0.1.1
  * Requires at least: 6.4
  * Requires PHP: 7.4
  * Author: WIZAD
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WOS_VERSION', '0.1.0' );
+define( 'WOS_VERSION', '0.1.1' );
 define( 'WOS_DB_VERSION', '1' );
 define( 'WOS_FILE', __FILE__ );
 define( 'WOS_DIR', plugin_dir_path( __FILE__ ) );

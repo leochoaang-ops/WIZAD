@@ -23,9 +23,12 @@ function wos_client_ip() {
 	return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 }
 
-/* Sign-in required everywhere. */
+/* Sign-in required everywhere except the plain home page, which the theme shows as a holding page. */
 add_action( 'template_redirect', function () {
 	if ( ! is_user_logged_in() ) {
+		if ( is_front_page() && empty( $_GET ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return;
+		}
 		auth_redirect();
 	}
 	wp_safe_redirect( wos_url( 'wizad-os' ) );
