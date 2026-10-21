@@ -35,6 +35,11 @@ require_once WOS_DIR . 'includes/admin.php';
 register_activation_hook( __FILE__, 'wos_activate' );
 
 function wos_activate() {
+	// This plugin makes the whole site private; never on the public website.
+	$host = wp_parse_url( home_url(), PHP_URL_HOST );
+	if ( in_array( $host, array( 'wizad.ca', 'www.wizad.ca' ), true ) ) {
+		wp_die( 'WIZAD OS makes the whole site private, so it must not run on the public website. Install it on os.wizad.ca instead.', 'WIZAD OS', array( 'back_link' => true ) );
+	}
 	wos_install_schema();
 	$admin = get_role( 'administrator' );
 	if ( $admin ) {
