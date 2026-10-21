@@ -1,5 +1,5 @@
 === WIZAD OS ===
-Version: 0.1.1 (Sprint 1)
+Version: 0.1.2 (Sprint 1)
 
 WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
 
