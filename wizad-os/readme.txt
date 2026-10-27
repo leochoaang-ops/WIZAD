@@ -1,7 +1,10 @@
 === WIZAD OS ===
-Version: 0.2.1 (WOS Sprint 0)
+Version: 0.2.2 (WOS Sprint 0)
 
 WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
+
+0.2.2 (Oct 27, 2026)
+- Add a decision: fields sit close together again.
 
 0.2.1 (Oct 27, 2026)
 - The WIZAD OS menu in wp-admin opens the app. The old dashboard is under "Old dashboard".
