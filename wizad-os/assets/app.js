@@ -111,29 +111,3 @@
 		log.scrollTop = log.scrollHeight;
 	} );
 }() );
-
-/* Edit toggles: show the form, hide the read-only view. */
-document.addEventListener( 'click', function ( e ) {
-	var btn = e.target.closest( '[data-toggle]' );
-	if ( ! btn ) {
-		return;
-	}
-	var form = document.getElementById( btn.dataset.toggle );
-	var view = document.getElementById( btn.dataset.toggle.replace( 'wos-edit-', 'wos-view-' ) );
-	var open = form.hidden;
-	form.hidden = ! open;
-	if ( view ) {
-		view.hidden = open;
-	}
-	document.querySelectorAll( '[data-toggle="' + btn.dataset.toggle + '"]' ).forEach( function ( b ) {
-		if ( 'Cancel' !== b.textContent ) {
-			b.hidden = open;
-		}
-	} );
-	if ( open ) {
-		var first = form.querySelector( 'input, select, textarea' );
-		if ( first ) {
-			first.focus();
-		}
-	}
-} );
