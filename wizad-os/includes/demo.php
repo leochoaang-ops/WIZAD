@@ -77,7 +77,6 @@ function wos_demo_load() {
 		),
 		array(
 			'name' => 'Fraser Landscaping (demo)', 'contact_name' => 'Tom Hall', 'email' => 'tom@example.com', 'source' => 'Referral', 'introducer' => 'BNI', 'owner' => 'Tau',
-			'contacts' => array( array( 'name' => 'Lisa Hall', 'role' => 'Finance / billing', 'email' => 'accounts@example.com', 'phone' => '604 555 0142' ), array( 'name' => 'Marco Diaz', 'role' => 'Assistant', 'email' => 'marco@example.com', 'phone' => '' ) ),
 			'stage' => 's0', 'scores' => array( 'fit' => 9, 'readiness' => 9, 'pay' => 8, 'expertise' => 8 ), 's0_hours' => 6.5, 'value' => 4200, 'win' => 80,
 			'checks' => array( 'assessed' => wos_demo_days_ago( 20, '' ), 'prelim' => wos_demo_days_ago( 18, '' ), 'intake' => wos_demo_days_ago( 10, '' ), 'nda' => wos_demo_days_ago( 10, '' ), 'summary' => wos_demo_days_ago( 2, '' ) ),
 			'prelim' => array( 'see' => 'Quotes take a week; seasonal crews are booked on a whiteboard.', 'sprint' => 'Online quote requests and a shared crew calendar.', 'low' => 20, 'high' => 26, 'next' => 'Discovery call', 'status' => 'sent', 'sent_at' => wos_demo_days_ago( 18 ) ),

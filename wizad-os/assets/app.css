@@ -223,12 +223,6 @@ body.wos-client { background: var(--bg); }
 .wos-form-groups .wos-field-row input { width: 100%; }
 .wos-form-groups .wos-field-row > .wos-field.is-grow { flex: 3 1 260px; }
 [hidden] { display: none !important; }
-.wos-people { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
-.wos-person { background: #FFF; border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; font-size: 14px; }
-.wos-form-groups .wos-contact-row { display: grid; grid-template-columns: 1.2fr 1fr 1.3fr 1fr; gap: 8px; }
-.wos-contact-row + .wos-contact-row .wos-field > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-@media (max-width: 720px) { .wos-form-groups .wos-contact-row { grid-template-columns: 1fr 1fr; padding-bottom: 10px; border-bottom: 1px dashed var(--line); } .wos-contact-row + .wos-contact-row .wos-field > span { position: static; width: auto; height: auto; clip: auto; } }
-.wos-contact-row select { width: 100%; }
 
 @media (max-width: 720px) {
 	.wos-nav { max-width: none; flex-basis: 100%; flex-direction: row; flex-wrap: wrap; padding: 12px; }

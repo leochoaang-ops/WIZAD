@@ -13,7 +13,7 @@
 defined( 'ABSPATH' ) || exit;
 
 define( 'WOS_VERSION', '0.3.0' );
-define( 'WOS_DB_VERSION', '4' );
+define( 'WOS_DB_VERSION', '3' );
 define( 'WOS_FILE', __FILE__ );
 define( 'WOS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WOS_URL', plugin_dir_url( __FILE__ ) );

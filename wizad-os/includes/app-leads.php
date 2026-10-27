@@ -288,7 +288,7 @@ function wos_app_lead_details( $lead ) {
 	};
 	$weighted = (float) $lead->value * (int) $lead->win / 100;
 	$groups   = array(
-		'Founder (main contact)' => array(
+		'Contact'   => array(
 			'Person' => $val( $lead->contact_name ),
 			'Email'  => $lead->email ? '<a href="mailto:' . esc_attr( $lead->email ) . '">' . esc_html( $lead->email ) . '</a>' : $val( '' ),
 			'Phone'  => $val( $lead->phone ),
@@ -322,20 +322,6 @@ function wos_app_lead_details( $lead ) {
 					</dl>
 				</div>
 			<?php endforeach; ?>
-			<?php if ( $lead->contacts ) : ?>
-				<div class="wos-group is-wide">
-					<h3>Other contacts</h3>
-					<div class="wos-people">
-						<?php foreach ( $lead->contacts as $c ) : ?>
-							<div class="wos-person">
-								<strong><?php echo esc_html( $c['name'] ); ?></strong>
-								<span class="wos-pill is-grey"><?php echo esc_html( $c['role'] ); ?></span>
-								<span class="wos-small"><?php echo $c['email'] ? '<a href="mailto:' . esc_attr( $c['email'] ) . '">' . esc_html( $c['email'] ) . '</a>' : ''; ?><?php echo $c['email'] && $c['phone'] ? ' · ' : ''; ?><?php echo esc_html( $c['phone'] ); ?></span>
-							</div>
-						<?php endforeach; ?>
-					</div>
-				</div>
-			<?php endif; ?>
 			<?php if ( '' !== trim( $lead->notes ) ) : ?>
 				<div class="wos-group is-wide"><h3>Notes</h3><p><?php echo nl2br( esc_html( $lead->notes ) ); ?></p></div>
 			<?php endif; ?>
@@ -343,31 +329,13 @@ function wos_app_lead_details( $lead ) {
 		<div id="wos-edit-<?php echo (int) $lead->id; ?>" hidden>
 			<?php wos_app_lead_form_open( $lead, 'wos_lead_update', 'wos-form wos-form-groups' ); ?>
 				<fieldset>
-					<legend>Business and founder (main contact)</legend>
+					<legend>Business and contact</legend>
 					<label class="wos-field"><span>Business name</span><input type="text" name="name" value="<?php echo esc_attr( $lead->name ); ?>"></label>
 					<div class="wos-field-row">
-						<label class="wos-field"><span>Founder</span><input type="text" name="contact_name" value="<?php echo esc_attr( $lead->contact_name ); ?>"></label>
+						<label class="wos-field"><span>Contact person</span><input type="text" name="contact_name" value="<?php echo esc_attr( $lead->contact_name ); ?>"></label>
 						<label class="wos-field"><span>Email</span><input type="text" name="email" value="<?php echo esc_attr( $lead->email ); ?>"></label>
 						<label class="wos-field"><span>Phone</span><input type="text" name="phone" value="<?php echo esc_attr( $lead->phone ); ?>"></label>
 					</div>
-				</fieldset>
-				<fieldset class="wos-contacts">
-					<legend>Other contacts</legend>
-					<?php
-					$rows   = $lead->contacts;
-					$rows[] = array( 'name' => '', 'role' => '', 'email' => '', 'phone' => '' );
-					foreach ( $rows as $i => $c ) :
-						?>
-						<div class="wos-field-row wos-contact-row">
-							<label class="wos-field"><span>Name</span><input type="text" name="contacts[<?php echo (int) $i; ?>][name]" value="<?php echo esc_attr( $c['name'] ); ?>"></label>
-							<label class="wos-field"><span>Role</span><select name="contacts[<?php echo (int) $i; ?>][role]">
-								<?php foreach ( wos_lead_contact_roles() as $r ) : ?><option <?php selected( $r, $c['role'] ); ?>><?php echo esc_html( $r ); ?></option><?php endforeach; ?>
-							</select></label>
-							<label class="wos-field"><span>Email</span><input type="text" name="contacts[<?php echo (int) $i; ?>][email]" value="<?php echo esc_attr( $c['email'] ); ?>"></label>
-							<label class="wos-field"><span>Phone</span><input type="text" name="contacts[<?php echo (int) $i; ?>][phone]" value="<?php echo esc_attr( $c['phone'] ); ?>"></label>
-						</div>
-					<?php endforeach; ?>
-					<p class="wos-muted wos-small">To remove someone, clear the name. <button type="button" class="wos-btn is-text is-small" data-add-contact>+ Add another person</button></p>
 				</fieldset>
 				<fieldset>
 					<legend>Source</legend>

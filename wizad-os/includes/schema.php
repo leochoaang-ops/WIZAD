@@ -184,7 +184,6 @@ function wos_install_schema() {
 		contact_name varchar(190) NOT NULL DEFAULT '',
 		email varchar(190) NOT NULL DEFAULT '',
 		phone varchar(50) NOT NULL DEFAULT '',
-		contacts longtext NULL,
 		source varchar(120) NOT NULL DEFAULT '',
 		introducer varchar(120) NOT NULL DEFAULT '',
 		owner varchar(60) NOT NULL DEFAULT '',
