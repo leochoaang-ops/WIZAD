@@ -87,7 +87,7 @@ function wos_decision_answer_text( $d ) {
 	return implode( ' · ', $parts );
 }
 
-/** Options typed one per line as "Label | what happens". */
+/** Options typed one per line as "Label | what we gain | the risk | margin". Only the label is required. */
 function wos_decision_parse_options( $text ) {
 	$out = array();
 	foreach ( preg_split( '/\r\n|\r|\n/', (string) $text ) as $line ) {
@@ -95,13 +95,32 @@ function wos_decision_parse_options( $text ) {
 		if ( '' === $line ) {
 			continue;
 		}
-		$bits  = array_map( 'trim', explode( '|', $line, 2 ) );
+		$bits  = array_map( 'trim', explode( '|', $line, 4 ) );
 		$out[] = array(
 			'label'  => sanitize_text_field( $bits[0] ),
 			'result' => isset( $bits[1] ) ? sanitize_text_field( $bits[1] ) : '',
+			'risk'   => isset( $bits[2] ) ? sanitize_text_field( $bits[2] ) : '',
+			'margin' => isset( $bits[3] ) ? sanitize_text_field( $bits[3] ) : '',
 		);
 	}
 	return array_slice( $out, 0, 6 );
+}
+
+/** "Read first" links typed one per line as "Title | https://..." (a bare URL works too). */
+function wos_decision_links( $text ) {
+	$out = array();
+	foreach ( preg_split( '/\r\n|\r|\n/', (string) $text ) as $line ) {
+		$bits = array_map( 'trim', explode( '|', trim( $line ), 2 ) );
+		if ( '' === $bits[0] ) {
+			continue;
+		}
+		$url   = isset( $bits[1] ) ? $bits[1] : $bits[0];
+		$out[] = array(
+			'title' => $bits[0],
+			'url'   => preg_match( '#^(https?://|/)#', $url ) ? $url : '',
+		);
+	}
+	return $out;
 }
 
 /** Create a decision. Returns its id or a WP_Error. */
@@ -118,6 +137,8 @@ function wos_decision_create( $data ) {
 			$options[] = array(
 				'label'  => $label,
 				'result' => is_array( $o ) && isset( $o['result'] ) ? sanitize_text_field( $o['result'] ) : '',
+				'risk'   => is_array( $o ) && isset( $o['risk'] ) ? sanitize_text_field( $o['risk'] ) : '',
+				'margin' => is_array( $o ) && isset( $o['margin'] ) ? sanitize_text_field( $o['margin'] ) : '',
 			);
 		}
 	}
@@ -135,6 +156,11 @@ function wos_decision_create( $data ) {
 		'recommended' => $rec,
 		'due_date'    => $due,
 		'link'        => isset( $data['link'] ) ? esc_url_raw( $data['link'] ) : '',
+		'why_now'     => isset( $data['why_now'] ) ? sanitize_textarea_field( $data['why_now'] ) : '',
+		'numbers'     => isset( $data['numbers'] ) ? sanitize_textarea_field( $data['numbers'] ) : '',
+		'read_first'  => isset( $data['read_first'] ) ? sanitize_textarea_field( $data['read_first'] ) : '',
+		'lead_id'     => isset( $data['lead_id'] ) ? (int) $data['lead_id'] : 0,
+		'kind'        => isset( $data['kind'] ) ? sanitize_key( $data['kind'] ) : '',
 		'status'      => 'waiting',
 		'added_by'    => isset( $data['added_by'] ) && '' !== $data['added_by'] ? sanitize_text_field( $data['added_by'] ) : $user->display_name,
 		'created_at'  => isset( $data['created_at'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/', $data['created_at'] ) ? $data['created_at'] : wos_now(),
@@ -169,6 +195,9 @@ add_action( 'admin_post_wos_decision_add', function () {
 		'recommended' => isset( $p['recommended'] ) && '' !== $p['recommended'] ? (int) $p['recommended'] - 1 : -1,
 		'due_date'    => isset( $p['due_date'] ) ? $p['due_date'] : '',
 		'link'        => isset( $p['link'] ) ? $p['link'] : '',
+		'why_now'     => isset( $p['why_now'] ) ? $p['why_now'] : '',
+		'numbers'     => isset( $p['numbers'] ) ? $p['numbers'] : '',
+		'read_first'  => isset( $p['read_first'] ) ? $p['read_first'] : '',
 	) );
 	if ( is_wp_error( $id ) ) {
 		wos_decision_back( $id->get_error_message(), 'error' );
@@ -200,6 +229,7 @@ add_action( 'admin_post_wos_decision_decide', function () {
 		'decided_at'    => wos_now(),
 		'aside_until'   => null,
 	) );
+	do_action( 'wos_decision_decided', wos_decision_get( $id ) );
 	wos_decision_back( 'Decided. It is in the decision log.' );
 } );
 

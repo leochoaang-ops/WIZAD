@@ -159,6 +159,11 @@ function wos_install_schema() {
 		recommended tinyint(3) NOT NULL DEFAULT -1,
 		due_date date NULL,
 		link varchar(255) NOT NULL DEFAULT '',
+		why_now text NULL,
+		numbers text NULL,
+		read_first text NULL,
+		lead_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		kind varchar(30) NOT NULL DEFAULT '',
 		status varchar(20) NOT NULL DEFAULT 'waiting',
 		aside_until date NULL,
 		answer text NULL,
@@ -170,6 +175,53 @@ function wos_install_schema() {
 		updated_at datetime NULL,
 		PRIMARY KEY  (id),
 		KEY status (status)
+	) $c;";
+
+	/* Sprint 0 with a client: assessment to signed SOW. The JSON columns hold the parts of the lead file. */
+	$sql[] = 'CREATE TABLE ' . wos_table( 'leads' ) . " (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		name varchar(190) NOT NULL DEFAULT '',
+		contact_name varchar(190) NOT NULL DEFAULT '',
+		email varchar(190) NOT NULL DEFAULT '',
+		phone varchar(50) NOT NULL DEFAULT '',
+		source varchar(120) NOT NULL DEFAULT '',
+		introducer varchar(120) NOT NULL DEFAULT '',
+		owner varchar(60) NOT NULL DEFAULT '',
+		stage varchar(20) NOT NULL DEFAULT 'lead',
+		level varchar(1) NOT NULL DEFAULT '',
+		scores longtext NULL,
+		answers longtext NULL,
+		value decimal(12,2) NOT NULL DEFAULT 0,
+		win tinyint(3) unsigned NOT NULL DEFAULT 20,
+		next_step varchar(255) NOT NULL DEFAULT '',
+		next_date date NULL,
+		checks longtext NULL,
+		s0_hours decimal(8,2) NOT NULL DEFAULT 0,
+		prelim longtext NULL,
+		intake longtext NULL,
+		summary longtext NULL,
+		token varchar(40) NOT NULL DEFAULT '',
+		client_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		log longtext NULL,
+		notes text NULL,
+		created_at datetime NULL,
+		updated_at datetime NULL,
+		PRIMARY KEY  (id),
+		KEY stage (stage),
+		KEY token (token)
+	) $c;";
+
+	$sql[] = 'CREATE TABLE ' . wos_table( 'chats' ) . " (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		scope varchar(40) NOT NULL DEFAULT '',
+		role varchar(10) NOT NULL DEFAULT 'user',
+		content longtext NULL,
+		user_name varchar(60) NOT NULL DEFAULT '',
+		tokens_in int(11) NOT NULL DEFAULT 0,
+		tokens_out int(11) NOT NULL DEFAULT 0,
+		created_at datetime NULL,
+		PRIMARY KEY  (id),
+		KEY scope (scope)
 	) $c;";
 
 	foreach ( $sql as $q ) {

@@ -36,7 +36,7 @@ function wos_app_screens() {
 	return array(
 		''          => array( 'Today', '', '' ),
 		'decisions' => array( 'Decisions', '', '' ),
-		'leads'     => array( 'Find clients', 'Sprint A', 'Leads in 5 stages, the Sprint 0 checklist, and where each lead came from.' ),
+		'leads'     => array( 'Find clients', '', '' ),
 		'clients'   => array( 'Clients', 'Sprint A', 'One file per lead and client: profile, baseline, sprints, documents, access and decisions. Documents are made from the contract pack.' ),
 		'sprints'   => array( 'Sprints', 'Sprint B', 'Activities by status, hours against budget, and expertise hours.' ),
 		'time'      => array( 'Time', 'Sprint B', 'Log hours in a few taps, by person, role and category.' ),
@@ -64,8 +64,16 @@ function wos_app_serve() {
 
 	$screens = wos_app_screens();
 	$screen  = isset( $screens[ $path ] ) ? $path : null;
-	status_header( null === $screen ? 404 : 200 );
+	$lead_id = preg_match( '#^leads/(\d+)$#', $path, $m ) ? (int) $m[1] : 0;
+	status_header( null === $screen && ! $lead_id ? 404 : 200 );
 	nocache_headers();
+	if ( $lead_id ) {
+		$lead = wos_lead_get( $lead_id );
+		wos_app_head( $lead ? $lead->name : 'Not found', 'leads' );
+		wos_app_lead( $lead_id );
+		wos_app_foot();
+		exit;
+	}
 	wos_app_head( null === $screen ? 'Not found' : $screens[ $screen ][0], $screen );
 
 	if ( null === $screen ) {
@@ -74,6 +82,8 @@ function wos_app_serve() {
 		wos_app_today();
 	} elseif ( 'decisions' === $screen ) {
 		wos_app_decisions();
+	} elseif ( 'leads' === $screen ) {
+		wos_app_leads();
 	} elseif ( 'settings' === $screen ) {
 		wos_app_settings();
 	} else {
@@ -192,6 +202,7 @@ function wos_app_today() {
 			<div class="wos-line"><span><?php echo esc_html( $d->question ); ?></span><?php echo wos_app_age_pill( $days, $level ); // phpcs:ignore -- escaped inside. ?></div>
 		<?php endforeach; ?>
 	</section>
+	<?php wos_app_chat_panel( 'today', 'Ask Claude', array( 'What should I decide first today?', 'Which leads need attention this week?' ) ); ?>
 	<p class="wos-note">Today grows in Sprint D: health score, sprints, pipeline, money, content and time join the decision queue.</p>
 	<?php
 }
@@ -298,13 +309,25 @@ function wos_app_decisions_waiting() {
 				<?php wp_nonce_field( 'wos_decision_' . $d->id ); ?>
 				<h2><?php echo esc_html( $d->question ); ?></h2>
 				<?php if ( $d->context ) : ?><p class="wos-muted"><?php echo nl2br( esc_html( $d->context ) ); ?></p><?php endif; ?>
+				<?php wos_app_decision_context( $d ); ?>
 				<?php if ( $d->options ) : ?>
 					<fieldset class="wos-options">
 						<legend class="screen-reader-text">Options</legend>
 						<?php foreach ( $d->options as $i => $o ) : ?>
 							<label class="wos-option">
 								<input type="radio" name="option" value="<?php echo (int) $i; ?>" <?php checked( $i, (int) $d->recommended ); ?>>
-								<span><strong><?php echo esc_html( $o['label'] ); ?></strong><?php if ( $o['result'] ) : ?><span><?php echo esc_html( $o['result'] ); ?></span><?php endif; ?><?php if ( (int) $d->recommended === $i ) : ?><em>Recommended</em><?php endif; ?></span>
+								<span>
+									<span class="wos-option-top"><strong><?php echo esc_html( $o['label'] ); ?></strong><?php if ( (int) $d->recommended === $i ) : ?><em>Recommended</em><?php endif; ?></span>
+									<?php if ( ! empty( $o['risk'] ) || ! empty( $o['margin'] ) ) : ?>
+										<span class="wos-gain">
+											<?php if ( $o['result'] ) : ?><b class="is-gain">Gain</b><span><?php echo esc_html( $o['result'] ); ?></span><?php endif; ?>
+											<?php if ( ! empty( $o['risk'] ) ) : ?><b class="is-risk">Risk</b><span><?php echo esc_html( $o['risk'] ); ?></span><?php endif; ?>
+											<?php if ( ! empty( $o['margin'] ) ) : ?><b>Margin</b><span class="wos-mono"><?php echo esc_html( $o['margin'] ); ?></span><?php endif; ?>
+										</span>
+									<?php elseif ( $o['result'] ) : ?>
+										<span><?php echo esc_html( $o['result'] ); ?></span>
+									<?php endif; ?>
+								</span>
 							</label>
 						<?php endforeach; ?>
 					</fieldset>
@@ -333,9 +356,39 @@ function wos_app_decisions_waiting() {
 					<button class="wos-btn is-text" type="submit">Withdraw</button>
 				</form>
 			</div>
+			<details class="wos-ask">
+				<summary>Ask Claude about this decision</summary>
+				<?php wos_app_chat_panel( 'decision:' . $d->id, 'Ask Claude about this', array( 'What are the risks of the recommended option?', 'What would you need to know to be sure?' ) ); ?>
+			</details>
 		</article>
 		<?php
 	endforeach;
+}
+
+/** Why now, the numbers and what to read first: the three boxes on a decision card. */
+function wos_app_decision_context( $d ) {
+	$why   = isset( $d->why_now ) ? trim( (string) $d->why_now ) : '';
+	$nums  = isset( $d->numbers ) ? trim( (string) $d->numbers ) : '';
+	$links = isset( $d->read_first ) ? wos_decision_links( $d->read_first ) : array();
+	if ( ! empty( $d->lead_id ) ) {
+		$links[] = array( 'title' => 'Lead file', 'url' => wos_app_url( 'leads/' . (int) $d->lead_id ) );
+	}
+	if ( '' === $why && '' === $nums && ! $links ) {
+		return;
+	}
+	?>
+	<div class="wos-context">
+		<?php if ( '' !== $why ) : ?><div><div class="wos-context-label">WHY NOW</div><?php echo nl2br( esc_html( $why ) ); ?></div><?php endif; ?>
+		<?php if ( '' !== $nums ) : ?><div><div class="wos-context-label">THE NUMBERS</div><span class="wos-mono"><?php echo nl2br( esc_html( $nums ) ); ?></span></div><?php endif; ?>
+		<?php if ( $links ) : ?>
+			<div><div class="wos-context-label">READ FIRST</div>
+				<?php foreach ( $links as $i => $l ) : ?>
+					<?php echo $i ? ' · ' : ''; ?><?php if ( $l['url'] ) : ?><a href="<?php echo esc_url( $l['url'] ); ?>"><?php echo esc_html( $l['title'] ); ?></a><?php else : ?><?php echo esc_html( $l['title'] ); ?><?php endif; ?>
+				<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+	</div>
+	<?php
 }
 
 function wos_app_decisions_aside() {
@@ -376,14 +429,17 @@ function wos_app_decisions_add() {
 	?>
 	<section class="wos-card wos-pad">
 		<h2>Add a decision for Leo</h2>
-		<p class="wos-muted">Only for a choice that only Leo can make. Give options and say which one you recommend.</p>
+		<p class="wos-muted">Only for a choice that only Leo can make. Give the context Leo needs, options with what we gain and risk, and say which one you recommend.</p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form">
 			<input type="hidden" name="action" value="wos_decision_add">
 			<?php wp_nonce_field( 'wos_decision_add' ); ?>
 			<label class="wos-field"><span>Question</span><input type="text" name="question" required maxlength="255" placeholder="Which retainer plan and price do we offer PHG?"></label>
 			<label class="wos-field"><span>Area · owner</span><input type="text" name="area" maxlength="120" placeholder="Clients · Tau · Pivot Homes Group"></label>
 			<label class="wos-field"><span>Context</span><textarea name="context" rows="3" placeholder="What Leo needs to know to choose."></textarea></label>
-			<label class="wos-field"><span>Options, one per line: label | what happens</span><textarea name="options" rows="4" placeholder="Growth plan: $3,300 for 3 months | Matches the financial model&#10;Talk to PHG first | Decision moves to after the meeting"></textarea></label>
+			<label class="wos-field"><span>Why now</span><textarea name="why_now" rows="2" placeholder="The retainer is meant to start Nov 1. PHG asked for a price this week."></textarea></label>
+			<label class="wos-field"><span>The numbers</span><textarea name="numbers" rows="2" placeholder="24 h/month · cost $1,134.72 · target margin 60%"></textarea></label>
+			<label class="wos-field"><span>Read first, one per line: title | link</span><textarea name="read_first" rows="2" placeholder="PHG retainer scope | https://…"></textarea></label>
+			<label class="wos-field"><span>Options, one per line: label | what we gain | the risk | margin</span><textarea name="options" rows="4" placeholder="Growth plan: $3,300 for 3 months | Easier yes | Lower income for 3 months | 66%&#10;Talk to PHG first | Price fits what they can pay | Start moves past Nov 1 | not set"></textarea></label>
 			<div class="wos-field-row">
 				<label class="wos-field"><span>Recommended option (number)</span><input type="number" name="recommended" min="1" max="6" value="1"></label>
 				<label class="wos-field"><span>Due date</span><input type="date" name="due_date"></label>
@@ -473,6 +529,58 @@ function wos_app_settings() {
 		</div>
 	</div>
 	</form>
+	<?php
+	wos_app_settings_claude();
+	wos_app_settings_demo();
+}
+
+function wos_app_settings_claude() {
+	$key   = wos_claude_key();
+	$usage = wos_chat_usage_month();
+	$const = defined( 'WOS_CLAUDE_KEY' ) && WOS_CLAUDE_KEY;
+	?>
+	<section class="wos-card wos-pad" id="claude">
+		<h2>Ask Claude</h2>
+		<p class="wos-muted">The chat on Today, on each decision and on each lead file, and the first draft of a preliminary proposal. It reads WOS data and says where each answer comes from. Model: <span class="wos-mono"><?php echo esc_html( WOS_CLAUDE_MODEL ); ?></span>.</p>
+		<div class="wos-line"><span>API key</span><strong class="wos-mono"><?php echo esc_html( $key ? 'Saved · ends in ' . substr( $key, -4 ) . ( $const ? ' (set in wp-config.php)' : '' ) : 'Not set · Ask Claude is off' ); ?></strong></div>
+		<div class="wos-line"><span>This month</span><span class="wos-mono"><?php echo esc_html( $usage['questions'] . ' questions · ' . number_format( $usage['in'] + $usage['out'] ) . ' tokens · about $' . number_format( $usage['usd'], 2 ) . ' USD' ); ?></span></div>
+		<?php if ( current_user_can( 'manage_options' ) && ! $const ) : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form">
+				<input type="hidden" name="action" value="wos_claude_key">
+				<?php wp_nonce_field( 'wos_claude_key' ); ?>
+				<label class="wos-field"><span><?php echo $key ? 'Replace the key' : 'Paste the key from console.anthropic.com'; ?></span><input type="password" name="key" autocomplete="off" placeholder="sk-ant-…"></label>
+				<p class="wos-muted wos-small">The key is never shown again after saving. Do not paste it in chat or email.</p>
+				<div class="wos-actions">
+					<button class="wos-btn" type="submit">Save the key</button>
+					<?php if ( $key ) : ?><label class="wos-small"><input type="checkbox" name="remove" value="1"> Remove the key instead</label><?php endif; ?>
+				</div>
+			</form>
+		<?php endif; ?>
+	</section>
+	<?php
+}
+
+function wos_app_settings_demo() {
+	if ( ! wos_demo_allowed() || ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	$loaded = wos_demo_loaded();
+	?>
+	<section class="wos-card wos-pad" id="demo">
+		<h2>Demo data</h2>
+		<p class="wos-muted">Only on staging. Loads sample leads at every Sprint 0 step and sample decisions, so the whole flow can be tried. Clear removes only what was loaded here.</p>
+		<div class="wos-actions">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-inline">
+				<input type="hidden" name="action" value="wos_demo_load"><?php wp_nonce_field( 'wos_demo' ); ?>
+				<button class="wos-btn" type="submit" <?php disabled( (bool) $loaded ); ?>>Load demo data</button>
+			</form>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-inline" onsubmit="return confirm('Remove the demo leads and decisions?');">
+				<input type="hidden" name="action" value="wos_demo_clear"><?php wp_nonce_field( 'wos_demo' ); ?>
+				<button class="wos-btn is-ghost" type="submit" <?php disabled( ! $loaded ); ?>>Clear demo data</button>
+			</form>
+			<span class="wos-muted wos-small"><?php echo esc_html( $loaded ? 'Loaded: ' . $loaded . ' records.' : 'Not loaded.' ); ?></span>
+		</div>
+	</section>
 	<?php
 }
 

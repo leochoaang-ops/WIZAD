@@ -1,4 +1,4 @@
-/* WOS app: the live check on Settings. */
+/* WOS app: the live check on Settings, and the Ask Claude chat. */
 ( function () {
 	var box = document.getElementById( 'wos-live' );
 	if ( ! box ) {
@@ -36,4 +36,78 @@
 	};
 	document.addEventListener( 'input', update );
 	update();
+}() );
+
+/* Ask Claude: send a question, show the answer. */
+( function () {
+	document.querySelectorAll( '.wos-chat' ).forEach( function ( box ) {
+		var form = box.querySelector( '.wos-chat-form' );
+		if ( ! form ) {
+			return;
+		}
+		var log = box.querySelector( '.wos-chat-log' );
+		var input = form.querySelector( 'textarea' );
+		var button = form.querySelector( 'button' );
+		var add = function ( text, cls ) {
+			var el = document.createElement( 'div' );
+			el.className = 'wos-msg ' + cls;
+			el.textContent = text;
+			log.appendChild( el );
+			log.scrollTop = log.scrollHeight;
+			return el;
+		};
+		var send = function ( text ) {
+			text = text.trim();
+			if ( ! text || button.disabled ) {
+				return;
+			}
+			add( text, 'is-me' );
+			input.value = '';
+			button.disabled = true;
+			var chips = box.querySelector( '.wos-chips' );
+			if ( chips ) {
+				chips.remove();
+			}
+			var wait = add( 'Thinking…', 'is-claude is-wait' );
+			fetch( box.dataset.url, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': box.dataset.nonce },
+				body: JSON.stringify( { scope: box.dataset.scope, message: text } )
+			} ).then( function ( r ) {
+				return r.json().then( function ( j ) {
+					return { ok: r.ok, j: j };
+				} );
+			} ).then( function ( res ) {
+				wait.remove();
+				if ( res.ok ) {
+					add( res.j.reply, 'is-claude' );
+				} else {
+					add( ( res.j && res.j.message ) || 'Something went wrong. Try again.', 'is-error' );
+				}
+			} ).catch( function () {
+				wait.remove();
+				add( 'Could not reach WOS. Check the connection and try again.', 'is-error' );
+			} ).then( function () {
+				button.disabled = false;
+				input.focus();
+			} );
+		};
+		form.addEventListener( 'submit', function ( e ) {
+			e.preventDefault();
+			send( input.value );
+		} );
+		input.addEventListener( 'keydown', function ( e ) {
+			if ( 'Enter' === e.key && ! e.shiftKey ) {
+				e.preventDefault();
+				send( input.value );
+			}
+		} );
+		box.querySelectorAll( '.wos-chip' ).forEach( function ( chip ) {
+			chip.addEventListener( 'click', function () {
+				send( chip.textContent );
+			} );
+		} );
+		log.scrollTop = log.scrollHeight;
+	} );
 }() );

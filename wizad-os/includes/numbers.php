@@ -25,6 +25,10 @@ function wos_number_fields() {
 		'decision_yellow'  => array( 'Decision yellow after', 'days', 'warnings', 3, '' ),
 		'decision_red'     => array( 'Decision red after', 'days', 'warnings', 7, 'Past its due date is red too' ),
 		'aside_max'        => array( 'Longest set-aside', 'days', 'warnings', 14, '' ),
+		's0_cap'           => array( 'Sprint 0 hour cap', 'h', 'clients', 6, 'Unpaid discovery. WOS warns at 75% and asks Leo once it is passed' ),
+		'level_a'          => array( 'Assessment level A from', 'points', 'clients', 32, 'Out of 40: four areas scored 0 to 10' ),
+		'level_b'          => array( 'Assessment level B from', 'points', 'clients', 24, '' ),
+		'level_c'          => array( 'Assessment level C from', 'points', 'clients', 16, 'Below this is level D' ),
 		'health_decisions' => array( 'Health: decisions on time', 'points', 'health', 25, '' ),
 		'health_sprints'   => array( 'Health: sprints in budget', 'points', 'health', 25, '' ),
 		'health_paid'      => array( 'Health: getting paid', 'points', 'health', 25, '' ),
@@ -38,6 +42,7 @@ function wos_number_groups() {
 		'pricing'  => 'Pricing',
 		'tax'      => 'Tax and money',
 		'warnings' => 'Warnings',
+		'clients'  => 'Leads and Sprint 0',
 		'health'   => 'Health score',
 	);
 }

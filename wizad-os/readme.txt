@@ -1,7 +1,14 @@
 === WIZAD OS ===
-Version: 0.2.2 (WOS Sprint 0)
+Version: 0.3.0 (WOS Sprint 0: clients)
 
 WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
+
+0.3.0 (Oct 27, 2026)
+- Find clients: pipeline in 5 stages, assessments, and a lead file per lead with the 7-step Sprint 0 checklist and the Sprint 0 hour cap (Settings).
+- Sprint 0 flow: assessment and level, preliminary proposal (no price, optional first draft by Claude), intake by interview or online, discovery summary the client confirms on a private link, price decision for Leo, Won (creates the client record).
+- Decision cards show Why now, The numbers, Read first, and gain, risk and margin per option.
+- Ask Claude: chat on Today, on each decision and on each lead file. The API key is added in Settings and never shown again.
+- Demo data (staging only): load and clear sample leads and decisions from Settings.
 
 0.2.2 (Oct 27, 2026)
 - Add a decision: fields sit close together again.
