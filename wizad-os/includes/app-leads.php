@@ -124,28 +124,35 @@ function wos_app_lead_new() {
 	<section class="wos-card wos-pad">
 		<h2>New lead from an assessment</h2>
 		<p class="wos-muted">Type in the Connected Tools Check result. WOS sets the level from the four scores, using the thresholds in Settings (A from <?php echo esc_html( wos_num( 'level_a' ) ); ?>, B from <?php echo esc_html( wos_num( 'level_b' ) ); ?>, C from <?php echo esc_html( wos_num( 'level_c' ) ); ?>, out of 40).</p>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form wos-form-groups">
 			<input type="hidden" name="action" value="wos_lead_new">
 			<?php wp_nonce_field( 'wos_lead_new' ); ?>
-			<div class="wos-field-row">
+			<fieldset>
+				<legend>Business and contact</legend>
 				<label class="wos-field"><span>Business name</span><input type="text" name="name" required maxlength="190"></label>
-				<label class="wos-field"><span>Contact</span><input type="text" name="contact_name" maxlength="190"></label>
-			</div>
-			<div class="wos-field-row">
-				<label class="wos-field"><span>Email</span><input type="text" name="email" maxlength="190"></label>
-				<label class="wos-field"><span>Phone</span><input type="text" name="phone" maxlength="50"></label>
-			</div>
-			<div class="wos-field-row">
-				<label class="wos-field"><span>Came from</span><input type="text" name="source" maxlength="120" placeholder="LinkedIn post, referral, Google…"></label>
-				<label class="wos-field"><span>Introducer</span><input type="text" name="introducer" maxlength="120"></label>
-				<label class="wos-field"><span>Owner on the team</span><input type="text" name="owner" maxlength="60" placeholder="Tau"></label>
-			</div>
-			<div class="wos-field-row">
-				<?php foreach ( wos_lead_score_areas() as $k => $label ) : ?>
-					<label class="wos-field"><span><?php echo esc_html( $label ); ?> (0 to 10)</span><input type="number" name="scores[<?php echo esc_attr( $k ); ?>]" min="0" max="10" value="5" required></label>
-				<?php endforeach; ?>
-			</div>
-			<label class="wos-field"><span>Their answers, one per line (question: answer)</span><textarea name="answers" rows="6" placeholder="How do enquiries reach you?: phone, email and the web form"></textarea></label>
+				<div class="wos-field-row">
+					<label class="wos-field"><span>Contact person</span><input type="text" name="contact_name" maxlength="190"></label>
+					<label class="wos-field"><span>Email</span><input type="text" name="email" maxlength="190"></label>
+					<label class="wos-field"><span>Phone</span><input type="text" name="phone" maxlength="50"></label>
+				</div>
+			</fieldset>
+			<fieldset>
+				<legend>Source</legend>
+				<div class="wos-field-row">
+					<label class="wos-field"><span>Came from</span><input type="text" name="source" maxlength="120" placeholder="LinkedIn post, referral, Google…"></label>
+					<label class="wos-field"><span>Introducer</span><input type="text" name="introducer" maxlength="120"></label>
+					<label class="wos-field"><span>Owner on the team</span><input type="text" name="owner" maxlength="60" placeholder="Tau"></label>
+				</div>
+			</fieldset>
+			<fieldset>
+				<legend>Assessment scores, 0 to 10 each</legend>
+				<div class="wos-field-row">
+					<?php foreach ( wos_lead_score_areas() as $k => $label ) : ?>
+						<label class="wos-field"><span><?php echo esc_html( $label ); ?></span><input type="number" name="scores[<?php echo esc_attr( $k ); ?>]" min="0" max="10" value="5" required></label>
+					<?php endforeach; ?>
+				</div>
+				<label class="wos-field"><span>Their answers, one per line (question: answer)</span><textarea name="answers" rows="5" placeholder="How do enquiries reach you?: phone, email and the web form"></textarea></label>
+			</fieldset>
 			<div class="wos-actions"><button class="wos-btn" type="submit">Create the lead</button></div>
 		</form>
 	</section>
@@ -241,40 +248,7 @@ function wos_app_lead_tab_overview( $lead ) {
 					<?php endforeach; ?>
 				</section>
 			<?php endif; ?>
-			<section class="wos-card wos-pad">
-				<h2>Details</h2>
-				<?php wos_app_lead_form_open( $lead, 'wos_lead_update' ); ?>
-					<div class="wos-field-row">
-						<label class="wos-field"><span>Business name</span><input type="text" name="name" value="<?php echo esc_attr( $lead->name ); ?>"></label>
-						<label class="wos-field"><span>Stage</span><select name="stage">
-							<?php foreach ( wos_lead_stages() as $k => $s ) : ?>
-								<?php if ( 'won' === $k && 'won' !== $lead->stage ) { continue; } ?>
-								<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $k, $lead->stage ); ?>><?php echo esc_html( $s[0] ); ?></option>
-							<?php endforeach; ?>
-						</select></label>
-					</div>
-					<div class="wos-field-row">
-						<label class="wos-field"><span>Contact</span><input type="text" name="contact_name" value="<?php echo esc_attr( $lead->contact_name ); ?>"></label>
-						<label class="wos-field"><span>Email</span><input type="text" name="email" value="<?php echo esc_attr( $lead->email ); ?>"></label>
-						<label class="wos-field"><span>Phone</span><input type="text" name="phone" value="<?php echo esc_attr( $lead->phone ); ?>"></label>
-					</div>
-					<div class="wos-field-row">
-						<label class="wos-field"><span>Came from</span><input type="text" name="source" value="<?php echo esc_attr( $lead->source ); ?>"></label>
-						<label class="wos-field"><span>Introducer</span><input type="text" name="introducer" value="<?php echo esc_attr( $lead->introducer ); ?>"></label>
-						<label class="wos-field"><span>Owner</span><input type="text" name="owner" value="<?php echo esc_attr( $lead->owner ); ?>"></label>
-					</div>
-					<div class="wos-field-row">
-						<label class="wos-field"><span>Value $</span><input type="number" step="0.01" min="0" name="value" value="<?php echo esc_attr( (float) $lead->value ); ?>"></label>
-						<label class="wos-field"><span>Chance to win %</span><input type="number" min="0" max="100" name="win" value="<?php echo esc_attr( (int) $lead->win ); ?>"></label>
-					</div>
-					<div class="wos-field-row">
-						<label class="wos-field"><span>Next step</span><input type="text" name="next_step" value="<?php echo esc_attr( $lead->next_step ); ?>"></label>
-						<label class="wos-field"><span>By</span><input type="date" name="next_date" value="<?php echo esc_attr( $lead->next_date ); ?>"></label>
-					</div>
-					<label class="wos-field"><span>Notes</span><textarea name="notes" rows="3"><?php echo esc_textarea( $lead->notes ); ?></textarea></label>
-					<div class="wos-actions"><button class="wos-btn" type="submit">Save</button></div>
-				</form>
-			</section>
+			<?php wos_app_lead_details( $lead ); ?>
 		</div>
 		<div class="wos-col-side">
 			<?php if ( in_array( $lead->stage, array( 'lead', 's0' ), true ) ) : ?>
@@ -303,6 +277,99 @@ function wos_app_lead_tab_overview( $lead ) {
 			<?php wos_app_chat_panel( 'lead:' . $lead->id, 'Ask Claude about this lead', array( 'What should we do next with this lead?', 'What is missing before we can price it?' ) ); ?>
 		</div>
 	</div>
+	<?php
+}
+
+/** Details: grouped and read-only first; the form opens only to edit. */
+function wos_app_lead_details( $lead ) {
+	$stages = wos_lead_stages();
+	$val    = function ( $v, $empty = 'Not set' ) {
+		return '' !== trim( (string) $v ) ? esc_html( $v ) : '<span class="wos-empty">' . esc_html( $empty ) . '</span>';
+	};
+	$weighted = (float) $lead->value * (int) $lead->win / 100;
+	$groups   = array(
+		'Contact'   => array(
+			'Person' => $val( $lead->contact_name ),
+			'Email'  => $lead->email ? '<a href="mailto:' . esc_attr( $lead->email ) . '">' . esc_html( $lead->email ) . '</a>' : $val( '' ),
+			'Phone'  => $val( $lead->phone ),
+		),
+		'Source'    => array(
+			'Came from'  => $val( $lead->source ),
+			'Introducer' => $val( $lead->introducer, 'None' ),
+			'Owner'      => $val( $lead->owner ),
+		),
+		'Deal'      => array(
+			'Stage'    => esc_html( $stages[ $lead->stage ][0] ),
+			'Value'    => (float) $lead->value ? '<span class="wos-mono">' . esc_html( wos_money( $lead->value ) ) . '</span>' : $val( '' ),
+			'Chance'   => '<span class="wos-mono">' . (int) $lead->win . '%</span>' . ( (float) $lead->value ? ' <span class="wos-muted wos-small">· weighted ' . esc_html( wos_money( $weighted ) ) . '</span>' : '' ),
+		),
+		'Next step' => array(
+			'What' => $val( $lead->next_step ),
+			'By'   => $lead->next_date ? esc_html( wp_date( 'D M j, Y', strtotime( $lead->next_date ) ) ) : $val( '', 'No date' ),
+		),
+	);
+	?>
+	<section class="wos-card wos-pad">
+		<div class="wos-card-head"><h2>Details</h2><button type="button" class="wos-btn is-ghost is-small" data-toggle="wos-edit-<?php echo (int) $lead->id; ?>">Edit</button></div>
+		<div class="wos-groups" id="wos-view-<?php echo (int) $lead->id; ?>">
+			<?php foreach ( $groups as $title => $rows ) : ?>
+				<div class="wos-group">
+					<h3><?php echo esc_html( $title ); ?></h3>
+					<dl>
+						<?php foreach ( $rows as $k => $v ) : ?>
+							<dt><?php echo esc_html( $k ); ?></dt><dd><?php echo $v; // phpcs:ignore -- escaped above. ?></dd>
+						<?php endforeach; ?>
+					</dl>
+				</div>
+			<?php endforeach; ?>
+			<?php if ( '' !== trim( $lead->notes ) ) : ?>
+				<div class="wos-group is-wide"><h3>Notes</h3><p><?php echo nl2br( esc_html( $lead->notes ) ); ?></p></div>
+			<?php endif; ?>
+		</div>
+		<div id="wos-edit-<?php echo (int) $lead->id; ?>" hidden>
+			<?php wos_app_lead_form_open( $lead, 'wos_lead_update', 'wos-form wos-form-groups' ); ?>
+				<fieldset>
+					<legend>Business and contact</legend>
+					<label class="wos-field"><span>Business name</span><input type="text" name="name" value="<?php echo esc_attr( $lead->name ); ?>"></label>
+					<div class="wos-field-row">
+						<label class="wos-field"><span>Contact person</span><input type="text" name="contact_name" value="<?php echo esc_attr( $lead->contact_name ); ?>"></label>
+						<label class="wos-field"><span>Email</span><input type="text" name="email" value="<?php echo esc_attr( $lead->email ); ?>"></label>
+						<label class="wos-field"><span>Phone</span><input type="text" name="phone" value="<?php echo esc_attr( $lead->phone ); ?>"></label>
+					</div>
+				</fieldset>
+				<fieldset>
+					<legend>Source</legend>
+					<div class="wos-field-row">
+						<label class="wos-field"><span>Came from</span><input type="text" name="source" value="<?php echo esc_attr( $lead->source ); ?>"></label>
+						<label class="wos-field"><span>Introducer</span><input type="text" name="introducer" value="<?php echo esc_attr( $lead->introducer ); ?>"></label>
+						<label class="wos-field"><span>Owner on the team</span><input type="text" name="owner" value="<?php echo esc_attr( $lead->owner ); ?>"></label>
+					</div>
+				</fieldset>
+				<fieldset>
+					<legend>Deal</legend>
+					<div class="wos-field-row">
+						<label class="wos-field"><span>Stage</span><select name="stage">
+							<?php foreach ( $stages as $k => $st ) : ?>
+								<?php if ( 'won' === $k && 'won' !== $lead->stage ) { continue; } ?>
+								<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $k, $lead->stage ); ?>><?php echo esc_html( $st[0] ); ?></option>
+							<?php endforeach; ?>
+						</select></label>
+						<label class="wos-field"><span>Value $</span><input type="number" step="0.01" min="0" name="value" value="<?php echo esc_attr( (float) $lead->value ); ?>"></label>
+						<label class="wos-field"><span>Chance to win %</span><input type="number" min="0" max="100" name="win" value="<?php echo esc_attr( (int) $lead->win ); ?>"></label>
+					</div>
+				</fieldset>
+				<fieldset>
+					<legend>Next step</legend>
+					<div class="wos-field-row">
+						<label class="wos-field is-grow"><span>What happens next</span><input type="text" name="next_step" value="<?php echo esc_attr( $lead->next_step ); ?>"></label>
+						<label class="wos-field"><span>By</span><input type="date" name="next_date" value="<?php echo esc_attr( $lead->next_date ); ?>"></label>
+					</div>
+					<label class="wos-field"><span>Notes</span><textarea name="notes" rows="3"><?php echo esc_textarea( $lead->notes ); ?></textarea></label>
+				</fieldset>
+				<div class="wos-actions"><button class="wos-btn" type="submit">Save</button><button class="wos-btn is-text" type="button" data-toggle="wos-edit-<?php echo (int) $lead->id; ?>">Cancel</button></div>
+			</form>
+		</div>
+	</section>
 	<?php
 }
 
