@@ -34,12 +34,47 @@ function wos_demo_intake( $v ) {
 	return $out;
 }
 
+/** A believable log for a demo lead, from the steps it has done. */
+function wos_demo_log( $l, $days, $by ) {
+	$at  = function ( $date, $time ) {
+		return substr( $date, 0, 10 ) . ' ' . $time;
+	};
+	$c   = $l['checks'];
+	$log = array( array( 'at' => wos_demo_days_ago( $days ), 'by' => 'Website form', 'text' => 'Assessment received: ' . wos_lead_total( $l['scores'] ) . '/40, level ' . $l['level'] . '.' ) );
+	if ( ! empty( $c['prelim'] ) ) {
+		$log[] = array( 'at' => $at( $c['prelim'], '11:05:00' ), 'by' => 'Tau', 'text' => 'Preliminary proposal marked sent.' );
+	}
+	if ( 's0' === $l['stage'] ) {
+		$log[] = array( 'at' => $at( wos_demo_days_ago( $days - 3 ), '10:00:00' ), 'by' => 'Tau', 'text' => 'Sprint 0 started (unpaid discovery).' );
+	}
+	if ( ! empty( $l['intake']['requested'] ) ) {
+		$log[] = array( 'at' => $at( $l['intake']['requested'], '08:40:00' ), 'by' => 'Tau', 'text' => 'Online intake link made for the client.' );
+	}
+	if ( ! empty( $l['s0_hours'] ) ) {
+		$log[] = array( 'at' => $at( wos_demo_days_ago( max( 1, $days - 6 ) ), '16:20:00' ), 'by' => 'Tau', 'text' => 'Logged ' . (float) $l['s0_hours'] . ' h of Sprint 0: discovery call and notes. Total ' . (float) $l['s0_hours'] . ' h.' );
+	}
+	if ( ! empty( $c['intake'] ) ) {
+		$log[] = array( 'at' => $at( $c['intake'], '15:10:00' ), 'by' => 'Tau', 'text' => 'Intake marked complete.' );
+	}
+	if ( ! empty( $c['nda'] ) ) {
+		$log[] = array( 'at' => $at( $c['nda'], '11:02:00' ), 'by' => 'Tau', 'text' => 'Ticked: NDA, if they share confidential data.' );
+	}
+	if ( ! empty( $l['summary']['sent_at'] ) ) {
+		$log[] = array( 'at' => $at( $l['summary']['sent_at'], '09:15:00' ), 'by' => 'Tau', 'text' => 'Discovery summary sent to the client to confirm.' );
+	}
+	if ( ! empty( $c['summary'] ) ) {
+		$log[] = array( 'at' => $at( $c['summary'], '16:12:00' ), 'by' => 'Client', 'text' => 'The client confirmed the discovery summary.' );
+	}
+	if ( 'lost' === $l['stage'] ) {
+		$log[] = array( 'at' => $at( wos_demo_days_ago( max( 0, $days - 1 ) ), '10:30:00' ), 'by' => 'Tau', 'text' => 'Moved to Not now: ' . $l['next_step'] . '.' );
+	}
+	usort( $log, function ( $a, $b ) { return strcmp( $a['at'], $b['at'] ); } );
+	return $log;
+}
+
 function wos_demo_load() {
 	$ids = array( 'leads' => array(), 'decisions' => array() );
 	$by  = 'Demo data';
-	$log = function ( $text, $days ) use ( $by ) {
-		return array( 'at' => wos_demo_days_ago( $days ), 'by' => $by, 'text' => $text );
-	};
 
 	$leads = array(
 		array(
@@ -99,8 +134,8 @@ function wos_demo_load() {
 		$token = ! empty( $l['token'] );
 		unset( $l['days'], $l['token'] );
 		$l['level'] = wos_lead_level( $l['scores'] );
-		$l['log']   = array( $log( 'Assessment received: ' . wos_lead_total( $l['scores'] ) . '/40, level ' . $l['level'] . '.', $days ) );
 		$l['checks'] = array_map( function ( $v ) { return trim( $v ); }, $l['checks'] );
+		$l['log']    = wos_demo_log( $l, $days, $by );
 		$id = wos_lead_save( 0, $l );
 		global $wpdb;
 		$wpdb->update( wos_table( 'leads' ), array( 'created_at' => wos_demo_days_ago( $days ) ), array( 'id' => $id ) );

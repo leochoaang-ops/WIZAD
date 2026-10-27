@@ -1,7 +1,17 @@
 === WIZAD OS ===
-Version: 0.3.0 (WOS Sprint 0: clients)
+Version: 0.4.0 (WOS Sprint 0: the UI standard)
 
 WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
+
+0.4.0 (Oct 27, 2026)
+- Lead file: a Path to Won header replaces the tabs. Steps grouped Discover / Agree / Close, each box reads "date · status", % to Won, WON in the logo magenta, a Next line.
+- Details: grouped and read-only, Edit opens the form. Other contacts for B2B clients (assistant, technical, finance, co-founder).
+- Email and phone are masked (acc***@g***.com). The eye fetches the real value, and the lead log records who looked.
+- Log: a timeline, newest first, grouped by day, with one icon and colour per kind of work and filters.
+- Intake: a read-only table with a source tag per row and the 30 / 60 / 90 day baseline; Edit opens one row per field.
+- The client's form: one column, chips, radios, a 1 to 5 scale, numbers with units, a progress bar and a privacy line. The discovery summary uses the same style.
+- Tables follow one standard: row lines only, small grey headers, numbers right-aligned, status pills, the row opens the record.
+- Demo data: leads come with a full log.
 
 0.3.0 (Oct 27, 2026)
 - Find clients: pipeline in 5 stages, assessments, and a lead file per lead with the 7-step Sprint 0 checklist and the Sprint 0 hour cap (Settings).

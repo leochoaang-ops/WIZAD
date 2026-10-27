@@ -136,6 +136,7 @@ function wos_app_foot() {
 	?>
 </main>
 </div>
+<div id="wos-app-cfg" hidden data-reveal="<?php echo esc_url( rest_url( 'wos/v1/reveal' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"></div>
 <script src="<?php echo esc_url( WOS_URL . 'assets/app.js?v=' . WOS_VERSION ); ?>"></script>
 </body>
 </html>

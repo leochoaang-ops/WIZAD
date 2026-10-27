@@ -58,6 +58,22 @@ function wos_lead_intake_fields() {
 	);
 }
 
+/** How each intake field is asked on the client's page: question, hint, type, options or unit. */
+function wos_lead_intake_ask() {
+	return array(
+		'business'  => array( 'What does your business do?', 'One line is enough, for example "Landscaping, 12 seasonal staff".', 'text' ),
+		'goal'      => array( 'What is the one thing you most want to fix?', '', 'textarea' ),
+		'tools'     => array( 'Which tools do you use today?', 'Pick all that apply.', 'chips', array( 'Gmail', 'Outlook', 'Excel', 'Google Sheets', 'QuickBooks', 'Facebook', 'Instagram', 'Paper' ) ),
+		'admin_who' => array( 'Who does the admin?', '', 'radio', array( 'I do it myself', 'A staff member', 'Someone outside the business' ) ),
+		'maturity'  => array( 'How digital is your business today?', '', 'scale', array( 'Mostly paper', 'Fully online' ) ),
+		'b_enq'     => array( 'Enquiries from your website', '', 'number', 'per month' ),
+		'b_reply'   => array( 'Time to reply to an enquiry', '', 'number', 'days' ),
+		'b_admin'   => array( 'Time spent on admin', '', 'number', 'hours / week' ),
+		'b_reach'   => array( 'People reached on social media', '', 'number', 'per month' ),
+		'b_won'     => array( 'Jobs won', '', 'number', 'per quarter' ),
+	);
+}
+
 function wos_lead_summary_parts() {
 	return array(
 		'heard' => 'What we heard',
@@ -123,16 +139,126 @@ function wos_lead_save( $id, $fields ) {
 	return (int) $wpdb->insert_id;
 }
 
-function wos_lead_log( $lead, $text, $by = null ) {
+function wos_lead_log( $lead, $text, $by = null, $kind = '' ) {
 	$log   = $lead->log;
 	$log[] = array(
 		'at'   => wos_now(),
 		'by'   => null === $by ? wp_get_current_user()->display_name : $by,
 		'text' => $text,
+		'kind' => $kind ? $kind : wos_lead_log_kind( array( 'text' => $text ) ),
 	);
 	$lead->log = $log;
 	wos_lead_save( $lead->id, array( 'log' => $log ) );
 }
+
+/** Kinds of log entry: label, filter group, icon. Each kind has one icon and colour. */
+function wos_lead_log_kinds() {
+	return array(
+		'approved'   => array( 'Decision', 'decisions' ),
+		'decided'    => array( 'Decision', 'decisions' ),
+		'rejected'   => array( 'Not now', 'decisions' ),
+		'sent'       => array( 'Sent', 'client' ),
+		'link'       => array( 'Client', 'client' ),
+		'client'     => array( 'Client', 'client' ),
+		'signed'     => array( 'Document', 'documents' ),
+		'confirmed'  => array( 'Document', 'documents' ),
+		'hours'      => array( 'Hours', 'hours' ),
+		'invoice'    => array( 'Invoice', 'documents' ),
+		'assessment' => array( 'Assessment', 'client' ),
+		'won'        => array( 'Won', 'decisions' ),
+		'viewed'     => array( 'Private data', 'other' ),
+		'edit'       => array( 'Edit', 'other' ),
+		'note'       => array( 'Note', 'other' ),
+	);
+}
+
+/** The kind of a log entry: stored on new entries, worked out from the text on older ones. */
+function wos_lead_log_kind( $e ) {
+	if ( ! empty( $e['kind'] ) && isset( wos_lead_log_kinds()[ $e['kind'] ] ) ) {
+		return $e['kind'];
+	}
+	$t   = isset( $e['text'] ) ? (string) $e['text'] : '';
+	$map = array(
+		'/^Won\b/'                          => 'won',
+		'/approved/i'                        => 'approved',
+		'/^Leo decided/'                     => 'decided',
+		'/Not now|Moved to Not now/'         => 'rejected',
+		'/^Logged .* h\b/'                   => 'hours',
+		'/link/i'                            => 'link',
+		'/asked for changes|filled in/i'     => 'client',
+		'/confirmed|complete/i'              => 'confirmed',
+		'/Ticked: (NDA|MSA)/'                => 'signed',
+		'/sent|Price options/i'              => 'sent',
+		'/^Assessment/'                      => 'assessment',
+		'/^Revealed|^Showed/'                => 'viewed',
+		'/^Moved to|^Unticked|^Ticked|Sprint 0 started/' => 'edit',
+	);
+	foreach ( $map as $re => $kind ) {
+		if ( preg_match( $re, $t ) ) {
+			return $kind;
+		}
+	}
+	return 'note';
+}
+
+/** acc***@g***.com: enough to recognise, not enough to copy. */
+function wos_mask_email( $email ) {
+	$email = (string) $email;
+	if ( '' === $email ) {
+		return '';
+	}
+	$at = strpos( $email, '@' );
+	if ( false === $at ) {
+		return substr( $email, 0, 2 ) . '***';
+	}
+	$user   = substr( $email, 0, $at );
+	$domain = substr( $email, $at + 1 );
+	$dot    = strrpos( $domain, '.' );
+	$tld    = false === $dot ? '' : substr( $domain, $dot );
+	return substr( $user, 0, min( 3, max( 1, strlen( $user ) - 1 ) ) ) . '***@' . substr( $domain, 0, 1 ) . '***' . $tld;
+}
+
+/** 604 *** **42 */
+function wos_mask_phone( $phone ) {
+	$digits = preg_replace( '/\D/', '', (string) $phone );
+	if ( strlen( $digits ) < 5 ) {
+		return '' === $digits ? '' : '***';
+	}
+	return substr( $digits, 0, 3 ) . ' *** **' . substr( $digits, -2 );
+}
+
+/** The real value behind a masked field. $field: email, phone, or c<N>email / c<N>phone for other contacts. */
+function wos_lead_private_value( $lead, $field ) {
+	if ( in_array( $field, array( 'email', 'phone' ), true ) ) {
+		return array( (string) $lead->$field, $lead->contact_name );
+	}
+	if ( preg_match( '/^c(\d{1,2})(email|phone)$/', $field, $m ) && isset( $lead->contacts[ (int) $m[1] ] ) ) {
+		$c = $lead->contacts[ (int) $m[1] ];
+		return array( (string) $c[ $m[2] ], $c['name'] );
+	}
+	return null;
+}
+
+// Masked contact data: the real value is fetched only when the eye is pressed, and the look is logged.
+add_action( 'rest_api_init', function () {
+	register_rest_route( 'wos/v1', '/reveal', array(
+		'methods'             => 'POST',
+		'permission_callback' => function () {
+			return current_user_can( 'wos_manage' );
+		},
+		'callback'            => function ( WP_REST_Request $req ) {
+			$lead  = wos_lead_get( (int) $req->get_param( 'lead' ) );
+			$field = sanitize_key( (string) $req->get_param( 'field' ) );
+			$got   = $lead ? wos_lead_private_value( $lead, $field ) : null;
+			if ( ! $got ) {
+				return new WP_Error( 'wos_reveal', 'Not found.', array( 'status' => 404 ) );
+			}
+			$what = false !== strpos( $field, 'email' ) ? 'email' : 'phone';
+			wos_lead_log( $lead, 'Showed the ' . $what . ' of ' . ( $got[1] ? $got[1] : 'the contact' ) . '.', null, 'viewed' );
+			return array( 'value' => $got[0] );
+		},
+	) );
+} );
 
 function wos_lead_tick( $lead, $key, $on = true ) {
 	$checks         = $lead->checks;
@@ -265,10 +391,16 @@ function wos_lead_contact_roles() {
 }
 
 /** Other contacts from the form: rows without a name are dropped. */
-function wos_lead_contacts_from_post() {
+function wos_lead_contacts_from_post( $old = array() ) {
 	$rows = isset( $_POST['contacts'] ) && is_array( $_POST['contacts'] ) ? wp_unslash( $_POST['contacts'] ) : array(); // phpcs:ignore -- nonce checked in wos_lead_request(); cleaned below.
 	$out  = array();
-	foreach ( $rows as $r ) {
+	foreach ( $rows as $i => $r ) {
+		// A masked field the user did not open keeps its saved value.
+		foreach ( array( 'email', 'phone' ) as $f ) {
+			if ( ! empty( $r[ $f . '_keep' ] ) && isset( $old[ (int) $i ][ $f ] ) ) {
+				$r[ $f ] = $old[ (int) $i ][ $f ];
+			}
+		}
 		$name = isset( $r['name'] ) ? sanitize_text_field( $r['name'] ) : '';
 		if ( '' === $name ) {
 			continue;
@@ -349,8 +481,8 @@ add_action( 'admin_post_wos_lead_update', function () {
 	$fields = array(
 		'name'         => wos_post_text( 'name' ),
 		'contact_name' => wos_post_text( 'contact_name' ),
-		'email'        => sanitize_email( wos_post_text( 'email' ) ),
-		'phone'        => wos_post_text( 'phone' ),
+		'email'        => wos_post_text( 'email_keep' ) ? $lead->email : sanitize_email( wos_post_text( 'email' ) ),
+		'phone'        => wos_post_text( 'phone_keep' ) ? $lead->phone : wos_post_text( 'phone' ),
 		'source'       => wos_post_text( 'source' ),
 		'introducer'   => wos_post_text( 'introducer' ),
 		'owner'        => wos_post_text( 'owner' ),
@@ -359,7 +491,7 @@ add_action( 'admin_post_wos_lead_update', function () {
 		'next_step'    => wos_post_text( 'next_step' ),
 		'next_date'    => preg_match( '/^\d{4}-\d{2}-\d{2}$/', wos_post_text( 'next_date' ) ) ? wos_post_text( 'next_date' ) : null,
 		'notes'        => wos_post_text( 'notes', true ),
-		'contacts'     => wos_lead_contacts_from_post(),
+		'contacts'     => wos_lead_contacts_from_post( $lead->contacts ),
 	);
 	if ( '' === $fields['name'] ) {
 		unset( $fields['name'] );
@@ -691,8 +823,15 @@ function wos_client_handle_post( $lead ) {
 		$intake = $lead->intake;
 		$vals   = isset( $intake['values'] ) ? $intake['values'] : array();
 		$in     = isset( $_POST['f'] ) && is_array( $_POST['f'] ) ? wp_unslash( $_POST['f'] ) : array(); // phpcs:ignore -- cleaned below.
+		// Chips arrive as a list, plus an optional "other" line.
+		if ( isset( $in['tools'] ) && is_array( $in['tools'] ) ) {
+			$in['tools'] = implode( ', ', array_map( 'sanitize_text_field', $in['tools'] ) );
+		}
+		if ( ! empty( $in['tools_other'] ) && ! is_array( $in['tools_other'] ) ) {
+			$in['tools'] = trim( ( isset( $in['tools'] ) ? $in['tools'] . ', ' : '' ) . sanitize_text_field( $in['tools_other'] ), ', ' );
+		}
 		foreach ( array_keys( wos_lead_intake_fields() ) as $k ) {
-			if ( isset( $in[ $k ] ) && '' !== trim( (string) $in[ $k ] ) ) {
+			if ( isset( $in[ $k ] ) && ! is_array( $in[ $k ] ) && '' !== trim( (string) $in[ $k ] ) ) {
 				$vals[ $k ] = array( 'v' => sanitize_text_field( $in[ $k ] ), 'src' => 'client' );
 			}
 		}
@@ -739,7 +878,7 @@ function wos_client_page( $lead, $msg ) {
 </head>
 <body class="wos-app wos-client">
 <main class="wos-client-main">
-	<div class="wos-eyebrow">WIZAD CONSULTING</div>
+	<div class="wos-cf-brand">WIZAD Consulting</div>
 	<?php if ( $msg ) : ?><div class="wos-flash" role="status"><?php echo esc_html( $msg ); ?></div><?php endif; ?>
 	<?php if ( ! $lead ) : ?>
 		<?php echo $msg ? '' : ''; ?>
@@ -751,29 +890,79 @@ function wos_client_page( $lead, $msg ) {
 			$shown = true;
 			$vals  = isset( $lead->intake['values'] ) ? $lead->intake['values'] : array();
 			?>
-			<section class="wos-card wos-pad">
+			<div class="wos-cf-top"><span>Step 1 of 2 · about 5 minutes</span><span class="wos-cf-bar"><i style="width: 50%"></i></span></div>
+			<form method="post" class="wos-card wos-cf">
+				<?php wp_nonce_field( 'wos_client_' . $token, 'wos_client_nonce' ); ?>
+				<input type="hidden" name="do" value="intake">
 				<h2>A few questions before we meet</h2>
-				<p class="wos-muted">About 5 minutes. Leave out anything you do not know; we can fill it in together.</p>
-				<form method="post" class="wos-form">
-					<?php wp_nonce_field( 'wos_client_' . $token, 'wos_client_nonce' ); ?>
-					<input type="hidden" name="do" value="intake">
-					<?php foreach ( wos_lead_intake_fields() as $k => $f ) : ?>
-						<label class="wos-field"><span><?php echo esc_html( $f[0] ); ?></span><input type="text" name="f[<?php echo esc_attr( $k ); ?>]" value="<?php echo esc_attr( isset( $vals[ $k ]['v'] ) ? $vals[ $k ]['v'] : '' ); ?>"></label>
-					<?php endforeach; ?>
-					<div class="wos-actions"><button class="wos-btn" type="submit">Send my answers</button></div>
-				</form>
-			</section>
+				<p class="wos-cf-hint">Not sure about something? Leave it blank, and we'll fill it in together.</p>
+				<?php
+				$fields = wos_lead_intake_fields();
+				$group  = '';
+				foreach ( wos_lead_intake_ask() as $k => $a ) :
+					$v = isset( $vals[ $k ]['v'] ) ? (string) $vals[ $k ]['v'] : '';
+					if ( $fields[ $k ][1] !== $group ) :
+						$group = $fields[ $k ][1];
+						?>
+						<div class="wos-cf-sec"><?php echo esc_html( 'profile' === $group ? 'Your business' : 'Your numbers today' ); ?></div>
+						<?php if ( 'baseline' === $group ) : ?><p class="wos-cf-hint">Rough numbers are fine. We measure them again after 30, 60 and 90 days.</p><?php endif; ?>
+					<?php endif; ?>
+					<?php if ( 'number' === $a[2] ) : ?>
+						<label class="wos-cf-num"><span><?php echo esc_html( $a[0] ); ?></span><input type="number" min="0" step="any" inputmode="decimal" name="f[<?php echo esc_attr( $k ); ?>]" value="<?php echo esc_attr( $v ); ?>"><em><?php echo esc_html( $a[3] ); ?></em></label>
+					<?php elseif ( 'text' === $a[2] || 'textarea' === $a[2] ) : ?>
+						<div class="wos-cf-f">
+							<label for="f-<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $a[0] ); ?></label>
+							<?php if ( $a[1] ) : ?><span class="wos-cf-hint" id="h-<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $a[1] ); ?></span><?php endif; ?>
+							<?php if ( 'text' === $a[2] ) : ?>
+								<input type="text" id="f-<?php echo esc_attr( $k ); ?>" name="f[<?php echo esc_attr( $k ); ?>]" value="<?php echo esc_attr( $v ); ?>"<?php echo $a[1] ? ' aria-describedby="h-' . esc_attr( $k ) . '"' : ''; ?>>
+							<?php else : ?>
+								<textarea id="f-<?php echo esc_attr( $k ); ?>" name="f[<?php echo esc_attr( $k ); ?>]" rows="2"><?php echo esc_textarea( $v ); ?></textarea>
+							<?php endif; ?>
+						</div>
+					<?php else : ?>
+						<fieldset class="wos-cf-f">
+							<legend><?php echo esc_html( $a[0] ); ?></legend>
+							<?php if ( $a[1] ) : ?><span class="wos-cf-hint"><?php echo esc_html( $a[1] ); ?></span><?php endif; ?>
+							<?php if ( 'chips' === $a[2] ) : ?>
+								<?php $have = array_map( 'trim', explode( ',', $v ) ); ?>
+								<div class="wos-cf-chips">
+									<?php foreach ( $a[3] as $o ) : ?>
+										<label class="wos-cf-chip"><input type="checkbox" name="f[<?php echo esc_attr( $k ); ?>][]" value="<?php echo esc_attr( $o ); ?>" <?php checked( in_array( $o, $have, true ) ); ?>><span><?php echo esc_html( $o ); ?></span></label>
+									<?php endforeach; ?>
+								</div>
+								<input type="text" name="f[<?php echo esc_attr( $k ); ?>_other]" placeholder="Other tools" aria-label="Other tools" class="wos-cf-other">
+							<?php elseif ( 'radio' === $a[2] ) : ?>
+								<div class="wos-cf-radios">
+									<?php foreach ( $a[3] as $o ) : ?>
+										<label><input type="radio" name="f[<?php echo esc_attr( $k ); ?>]" value="<?php echo esc_attr( $o ); ?>" <?php checked( $o, $v ); ?>><span><?php echo esc_html( $o ); ?></span></label>
+									<?php endforeach; ?>
+								</div>
+							<?php else : ?>
+								<div class="wos-cf-seg">
+									<?php for ( $i = 1; $i <= 5; $i++ ) : ?>
+										<label><input type="radio" name="f[<?php echo esc_attr( $k ); ?>]" value="<?php echo (int) $i; ?>" <?php checked( (string) $i, $v ); ?>><span><?php echo (int) $i; ?></span></label>
+									<?php endfor; ?>
+								</div>
+								<div class="wos-cf-scale"><span><?php echo esc_html( $a[3][0] ); ?></span><span><?php echo esc_html( $a[3][1] ); ?></span></div>
+							<?php endif; ?>
+						</fieldset>
+					<?php endif; ?>
+				<?php endforeach; ?>
+				<div class="wos-cf-foot"><button class="wos-btn" type="submit">Send my answers</button><span class="wos-cf-hint">Only WIZAD sees this. Private to you.</span></div>
+			</form>
 		<?php endif; ?>
 		<?php
 		$status = isset( $lead->summary['status'] ) ? $lead->summary['status'] : '';
 		if ( in_array( $status, array( 'sent', 'confirmed', 'changes' ), true ) ) :
 			$shown = true;
 			?>
-			<article class="wos-card wos-pad wos-summary-doc">
-				<div class="wos-eyebrow">DISCOVERY SUMMARY</div>
+			<div class="wos-cf-top"><span>Step 2 of 2 · read and confirm</span><span class="wos-cf-bar"><i style="width: <?php echo 'confirmed' === $status ? 100 : 75; ?>%"></i></span></div>
+			<article class="wos-card wos-cf wos-summary-doc">
+				<h2>Discovery summary</h2>
 				<?php foreach ( wos_lead_summary_parts() as $k => $label ) : ?>
 					<?php if ( ! empty( $lead->summary[ $k ] ) ) : ?>
-						<p><strong><?php echo esc_html( $label ); ?>.</strong> <?php echo nl2br( esc_html( $lead->summary[ $k ] ) ); ?></p>
+						<div class="wos-cf-sec"><?php echo esc_html( $label ); ?></div>
+						<p><?php echo nl2br( esc_html( $lead->summary[ $k ] ) ); ?></p>
 					<?php endif; ?>
 				<?php endforeach; ?>
 				<?php if ( 'sent' === $status ) : ?>

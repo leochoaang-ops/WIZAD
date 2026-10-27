@@ -119,7 +119,7 @@ document.addEventListener( 'click', function ( e ) {
 		return;
 	}
 	var form = document.getElementById( btn.dataset.toggle );
-	var view = document.getElementById( btn.dataset.toggle.replace( 'wos-edit-', 'wos-view-' ) );
+	var view = document.getElementById( btn.dataset.hide || btn.dataset.toggle.replace( 'wos-edit-', 'wos-view-' ) );
 	var open = form.hidden;
 	form.hidden = ! open;
 	if ( view ) {
@@ -131,7 +131,7 @@ document.addEventListener( 'click', function ( e ) {
 		}
 	} );
 	if ( open ) {
-		var first = form.querySelector( 'input, select, textarea' );
+		var first = form.querySelector( 'input:not([readonly]):not([type=hidden]), select, textarea' );
 		if ( first ) {
 			first.focus();
 		}
@@ -156,4 +156,81 @@ document.addEventListener( 'click', function ( e ) {
 	} );
 	rows[ rows.length - 1 ].after( row );
 	row.querySelector( 'input' ).focus();
+} );
+
+/* Masked email and phone: the eye fetches the real value (WOS logs who looked). */
+document.addEventListener( 'click', function ( e ) {
+	var eye = e.target.closest( '.wos-eye' );
+	if ( ! eye ) {
+		return;
+	}
+	var box = eye.parentNode;
+	var cfg = document.getElementById( 'wos-app-cfg' );
+	if ( ! cfg || eye.disabled ) {
+		return;
+	}
+	eye.disabled = true;
+	fetch( cfg.dataset.reveal, {
+		method: 'POST',
+		credentials: 'same-origin',
+		headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.dataset.nonce },
+		body: JSON.stringify( { lead: box.dataset.lead, field: box.dataset.field } )
+	} ).then( function ( r ) {
+		return r.ok ? r.json() : Promise.reject();
+	} ).then( function ( j ) {
+		if ( box.classList.contains( 'wos-private-in' ) ) {
+			var input = box.querySelector( 'input[type=text]' );
+			var keep = box.querySelector( 'input[type=hidden]' );
+			input.value = j.value;
+			input.readOnly = false;
+			if ( keep ) {
+				keep.remove();
+			}
+			eye.remove();
+			input.focus();
+			return;
+		}
+		var v = box.querySelector( '.wos-private-v' );
+		var a = document.createElement( 'a' );
+		a.href = ( 'email' === box.dataset.type ? 'mailto:' : 'tel:' ) + j.value;
+		a.textContent = j.value;
+		v.replaceWith( a );
+		eye.remove();
+	} ).catch( function () {
+		eye.disabled = false;
+		eye.title = 'Could not load. Try again.';
+	} );
+} );
+
+/* Log filters. */
+document.addEventListener( 'click', function ( e ) {
+	var chip = e.target.closest( '[data-log-filter]' );
+	if ( ! chip ) {
+		return;
+	}
+	var f = chip.dataset.logFilter;
+	chip.parentNode.querySelectorAll( '[data-log-filter]' ).forEach( function ( c ) {
+		c.classList.toggle( 'is-on', c === chip );
+		c.setAttribute( 'aria-pressed', c === chip ? 'true' : 'false' );
+	} );
+	document.querySelectorAll( '.wos-tl-ev' ).forEach( function ( ev ) {
+		ev.hidden = 'all' !== f && ev.dataset.group !== f;
+	} );
+	document.querySelectorAll( '.wos-tl-day' ).forEach( function ( d ) {
+		var n = d.nextElementSibling, any = false;
+		while ( n && ! n.classList.contains( 'wos-tl-day' ) ) {
+			any = any || ! n.hidden;
+			n = n.nextElementSibling;
+		}
+		d.hidden = ! any;
+	} );
+} );
+
+/* Tables: the whole row opens the record. */
+document.addEventListener( 'click', function ( e ) {
+	var tr = e.target.closest( 'tr[data-href]' );
+	if ( ! tr || e.target.closest( 'a, button, input, select, label' ) ) {
+		return;
+	}
+	window.location = tr.dataset.href;
 } );

@@ -85,13 +85,28 @@ function wos_app_lead_pipeline( $leads ) {
 	</div>
 	<?php
 	$lost = array_filter( $leads, function ( $l ) { return 'lost' === $l->stage; } );
-	if ( $lost ) {
-		echo '<section class="wos-card wos-pad"><h2>Not now</h2>';
-		foreach ( $lost as $l ) {
-			printf( '<div class="wos-line"><a href="%s">%s</a><span class="wos-muted">%s</span></div>', esc_url( wos_app_url( 'leads/' . $l->id ) ), esc_html( $l->name ), esc_html( $l->next_step ) );
-		}
-		echo '</section>';
-	}
+	if ( $lost ) :
+		?>
+		<section class="wos-card wos-pad">
+			<h2>Not now</h2>
+			<div class="wos-table-wrap">
+				<table class="wos-table">
+					<thead><tr><th>Business</th><th>Level</th><th>Why, or what next</th><th></th></tr></thead>
+					<tbody>
+						<?php foreach ( $lost as $l ) : ?>
+							<tr data-href="<?php echo esc_url( wos_app_url( 'leads/' . $l->id ) ); ?>">
+								<td class="is-who"><a href="<?php echo esc_url( wos_app_url( 'leads/' . $l->id ) ); ?>"><?php echo esc_html( $l->name ); ?></a><span><?php echo esc_html( $l->contact_name ); ?></span></td>
+								<td><?php echo wos_app_level_pill( $l->level ); // phpcs:ignore -- escaped inside. ?></td>
+								<td><?php echo esc_html( $l->next_step ); ?></td>
+								<td class="is-act">Open ›</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		</section>
+		<?php
+	endif;
 	if ( ! $leads ) {
 		echo '<p class="wos-muted">No leads yet. Add one from an assessment with <a href="' . esc_url( wos_app_url( 'leads', array( 'tab' => 'new' ) ) ) . '">+ New assessment</a>.</p>';
 	}
@@ -99,24 +114,39 @@ function wos_app_lead_pipeline( $leads ) {
 
 function wos_app_lead_assessments( $leads ) {
 	$with = array_filter( $leads, function ( $l ) { return '' !== $l->level; } );
-	echo '<section class="wos-card wos-pad"><h2>Assessments received</h2><p class="wos-muted wos-small">Newest first. Each one became a lead with its score and level.</p>';
-	if ( ! $with ) {
-		echo '<p class="wos-muted">None yet.</p>';
-	}
-	foreach ( $with as $l ) {
-		$st = isset( $l->prelim['status'] ) && 'sent' === $l->prelim['status'] ? 'Proposal sent' : 'Proposal draft';
-		printf(
-			'<div class="wos-line"><span><a href="%s"><strong>%s</strong></a><br><span class="wos-muted wos-small">%s · %s · %d/40</span></span><span class="wos-card-pills">%s%s</span></div>',
-			esc_url( wos_app_url( 'leads/' . $l->id, array( 'tab' => 'proposal' ) ) ),
-			esc_html( $l->name ),
-			esc_html( substr( (string) $l->created_at, 0, 10 ) ),
-			esc_html( $l->source ? $l->source : 'source not set' ),
-			(int) wos_lead_total( $l->scores ),
-			wos_app_level_pill( $l->level ), // phpcs:ignore -- escaped inside.
-			wos_app_lead_pill( $st, 'sent' === ( isset( $l->prelim['status'] ) ? $l->prelim['status'] : '' ) ? 'green' : 'grey' ) // phpcs:ignore -- escaped inside.
-		);
-	}
-	echo '</section>';
+	usort( $with, function ( $x, $y ) { return strcmp( $y->created_at, $x->created_at ); } );
+	?>
+	<section class="wos-card wos-pad">
+		<h2>Assessments received</h2>
+		<?php if ( ! $with ) : ?>
+			<p class="wos-muted">None yet.</p>
+		<?php else : ?>
+			<div class="wos-label"><?php echo esc_html( count( $with ) . ' received · newest first' ); ?></div>
+			<div class="wos-table-wrap">
+				<table class="wos-table">
+					<thead><tr><th>Business</th><th>Received</th><th>Source</th><th class="num">Score</th><th>Level</th><th>Proposal</th><th></th></tr></thead>
+					<tbody>
+						<?php foreach ( $with as $l ) : ?>
+							<?php
+							$sent = isset( $l->prelim['status'] ) && 'sent' === $l->prelim['status'];
+							$url  = wos_app_url( 'leads/' . $l->id, array( 'tab' => 'proposal' ) );
+							?>
+							<tr data-href="<?php echo esc_url( $url ); ?>">
+								<td class="is-who"><a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $l->name ); ?></a><span><?php echo esc_html( $l->contact_name ); ?></span></td>
+								<td><?php echo esc_html( wos_app_short_date( $l->created_at ) ); ?></td>
+								<td><?php echo $l->source ? esc_html( $l->source ) : '<span class="wos-empty">Not set</span>'; ?></td>
+								<td class="num"><?php echo (int) wos_lead_total( $l->scores ); ?>/40</td>
+								<td><?php echo wos_app_level_pill( $l->level ); // phpcs:ignore -- escaped inside. ?></td>
+								<td><?php echo wos_app_lead_pill( $sent ? 'Sent ' . wos_app_short_date( $l->prelim['sent_at'] ) : 'Draft', $sent ? 'green' : 'grey' ); // phpcs:ignore -- escaped inside. ?></td>
+								<td class="is-act">Open ›</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		<?php endif; ?>
+	</section>
+	<?php
 }
 
 function wos_app_lead_new() {
@@ -179,24 +209,105 @@ function wos_app_lead( $id ) {
 	if ( ! isset( $tabs[ $tab ] ) ) {
 		$tab = 'overview';
 	}
-	$stages = wos_lead_stages();
-	?>
-	<div class="wos-head">
-		<a href="<?php echo esc_url( wos_app_url( 'leads' ) ); ?>" class="wos-small">Find clients</a>
-		<div class="wos-head-row">
-			<h1><?php echo esc_html( $lead->name ); ?></h1>
-			<span class="wos-card-pills"><?php echo wos_app_lead_pill( $stages[ $lead->stage ][0], 'grey' ) . wos_app_level_pill( $lead->level ) . ( 's0' === $lead->stage ? wos_app_hours_pill( $lead ) : '' ); // phpcs:ignore -- escaped inside. ?></span>
-		</div>
-		<p class="wos-muted"><?php echo esc_html( trim( implode( ' · ', array_filter( array( $lead->contact_name, $lead->source, $lead->owner ? 'owner: ' . $lead->owner : '' ) ) ) ) ); ?></p>
-	</div>
-	<div class="wos-tabs">
-		<?php foreach ( $tabs as $k => $label ) : ?>
-			<a class="<?php echo $k === $tab ? 'is-on' : ''; ?>" href="<?php echo esc_url( wos_app_url( 'leads/' . $lead->id, 'overview' === $k ? array() : array( 'tab' => $k ) ) ); ?>"><?php echo esc_html( $label ); ?></a>
-		<?php endforeach; ?>
-	</div>
-	<?php
+	wos_app_lead_path( $lead, $tab );
 	$fn = 'wos_app_lead_tab_' . $tab;
 	$fn( $lead );
+}
+
+/** The steps on the path to Won: check key => array( title, done word, to-do verb, tab ). */
+function wos_app_lead_steps() {
+	return array(
+		'discover' => array(
+			'assessed' => array( 'Assessed', '', 'Score', 'proposal' ),
+			'prelim'   => array( 'Proposal', 'Sent', 'Send', 'proposal' ),
+			'intake'   => array( 'Intake', 'Done', 'Fill in', 'intake' ),
+		),
+		'agree'    => array(
+			'nda'     => array( 'NDA', 'Signed', 'Sign', 'overview' ),
+			'summary' => array( 'Summary', 'Confirmed', 'Confirm', 'summary' ),
+		),
+		'close'    => array(
+			'price'  => array( 'Price', 'Approved', 'Approve', 'price' ),
+			'signed' => array( 'MSA + SOW', 'Signed', 'Sign', 'price' ),
+		),
+	);
+}
+
+/** "Oct 17" from a stored date. */
+function wos_app_short_date( $date ) {
+	$t = strtotime( (string) $date );
+	return $t ? wp_date( 'M j', $t ) : '';
+}
+
+/** The lead header: name, % to Won, the steps in three groups, the next step. The steps replace the row of tabs. */
+function wos_app_lead_path( $lead, $tab ) {
+	list( $done, $all ) = wos_lead_progress( $lead );
+	$won  = 'won' === $lead->stage || 'run' === $lead->stage;
+	$pct  = $won ? 100 : (int) round( $done / max( 1, $all ) * 100 );
+	$now  = '';
+	$open = '';
+	foreach ( wos_app_lead_steps() as $group ) {
+		foreach ( $group as $k => $st ) {
+			if ( '' === $now && empty( $lead->checks[ $k ] ) ) {
+				$now  = $k;
+				$open = $st[3];
+			}
+		}
+	}
+	$sub = array_filter( array( $lead->contact_name, $lead->source, $lead->owner ? 'owner ' . $lead->owner : '' ) );
+	?>
+	<section class="wos-card wos-pad wos-path-card">
+		<a href="<?php echo esc_url( wos_app_url( 'leads' ) ); ?>" class="wos-small">Find clients</a>
+		<div class="wos-path-top">
+			<div>
+				<h1><?php echo esc_html( $lead->name ); ?></h1>
+				<div class="wos-path-sub"><?php echo esc_html( implode( ' · ', $sub ) ); ?><?php echo $sub ? ' ' : ''; ?><span class="wos-card-pills"><?php echo wos_app_level_pill( $lead->level ) . ( 's0' === $lead->stage ? wos_app_hours_pill( $lead ) : '' ) . ( 'lost' === $lead->stage ? wos_app_lead_pill( 'Not now', 'grey' ) : '' ) . ( $won ? wos_app_lead_pill( 'Client', 'green' ) : '' ); // phpcs:ignore -- escaped inside. ?></span></div>
+			</div>
+			<div class="wos-path-pct"><strong><?php echo (int) $pct; ?>%</strong><span><?php echo esc_html( $won ? 'Won' . ( ! empty( $lead->checks['signed'] ) ? ' ' . wos_app_short_date( $lead->checks['signed'] ) : '' ) : $done . ' of ' . $all . ' steps done' ); ?></span></div>
+		</div>
+		<nav class="wos-path" aria-label="Path to Won">
+			<?php foreach ( wos_app_lead_steps() as $gk => $group ) : ?>
+				<div class="wos-path-group is-<?php echo esc_attr( $gk ); ?>">
+					<div class="wos-path-label"><?php echo esc_html( strtoupper( $gk ) ); ?></div>
+					<div class="wos-path-row">
+						<?php foreach ( $group as $k => $st ) : ?>
+							<?php
+							$is_done = ! empty( $lead->checks[ $k ] );
+							$state   = $is_done ? 'is-done' : ( $k === $now && ! $won ? 'is-now' : 'is-todo' );
+							if ( $is_done ) {
+								$word = 'assessed' === $k ? (int) wos_lead_total( $lead->scores ) . '/40' : $st[1];
+								$line = wos_app_short_date( $lead->checks[ $k ] ) . ' · ' . $word;
+							} elseif ( 'is-now' === $state ) {
+								$line = ( $lead->next_date ? 'By ' . wos_app_short_date( $lead->next_date ) : 'Now' ) . ' · ' . $st[2];
+							} else {
+								$line = 'To do';
+							}
+							?>
+							<a class="wos-step <?php echo esc_attr( $state . ( $st[3] === $tab && 'overview' !== $tab ? ' is-here' : '' ) ); ?>" href="<?php echo esc_url( wos_app_url( 'leads/' . $lead->id, 'overview' === $st[3] ? array() : array( 'tab' => $st[3] ) ) ); ?>"<?php echo 'is-now' === $state ? ' aria-current="step"' : ''; ?>>
+								<b><?php echo esc_html( $st[0] ); ?></b><em><?php echo esc_html( $line ); ?></em>
+							</a>
+						<?php endforeach; ?>
+					</div>
+				</div>
+			<?php endforeach; ?>
+			<div class="wos-path-group">
+				<div class="wos-path-label">&nbsp;</div>
+				<div class="wos-won<?php echo $won ? ' is-won' : ''; ?>">WON<?php echo $won && ! empty( $lead->checks['signed'] ) ? '<small>' . esc_html( wos_app_short_date( $lead->checks['signed'] ) ) . '</small>' : ''; ?></div>
+			</div>
+		</nav>
+		<div class="wos-path-track"><i style="width: <?php echo (int) $pct; ?>%"></i></div>
+		<div class="wos-path-next">
+			<span><span class="wos-path-k"><?php echo $won ? 'CLIENT' : 'NEXT'; ?></span><?php echo esc_html( $won ? 'Won. This lead is now a client.' : ( $lead->next_step ? $lead->next_step : 'No next step set' ) . ( $lead->next_date ? ' · by ' . wos_app_short_date( $lead->next_date ) : '' ) ); ?></span>
+			<?php if ( $open && ! $won && $open !== $tab ) : ?>
+				<a class="wos-btn is-small" href="<?php echo esc_url( wos_app_url( 'leads/' . $lead->id, 'overview' === $open ? array() : array( 'tab' => $open ) ) ); ?>">Open the step</a>
+			<?php endif; ?>
+		</div>
+		<div class="wos-subnav">
+			<a class="<?php echo 'overview' === $tab ? 'is-on' : ''; ?>" href="<?php echo esc_url( wos_app_url( 'leads/' . $lead->id ) ); ?>">Overview</a>
+			<a class="<?php echo 'log' === $tab ? 'is-on' : ''; ?>" href="<?php echo esc_url( wos_app_url( 'leads/' . $lead->id, array( 'tab' => 'log' ) ) ); ?>">Log <span class="wos-muted"><?php echo count( $lead->log ); ?></span></a>
+		</div>
+	</section>
+	<?php
 }
 
 /** The hidden fields every lead form needs. */
@@ -280,6 +391,31 @@ function wos_app_lead_tab_overview( $lead ) {
 	<?php
 }
 
+/** A masked email or phone with an eye: the real value is fetched, and logged, only when the eye is pressed. */
+function wos_app_private( $lead, $field, $value, $type ) {
+	if ( '' === (string) $value ) {
+		return '<span class="wos-empty">Not set</span>';
+	}
+	$mask = 'email' === $type ? wos_mask_email( $value ) : wos_mask_phone( $value );
+	return '<span class="wos-private" data-lead="' . (int) $lead->id . '" data-field="' . esc_attr( $field ) . '" data-type="' . esc_attr( $type ) . '"><span class="wos-private-v">' . esc_html( $mask ) . '</span>'
+		. wos_app_eye( $type ) . '</span>';
+}
+
+function wos_app_eye( $type ) {
+	return '<button type="button" class="wos-eye" aria-label="Show the ' . esc_attr( $type ) . '" title="Show"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+}
+
+/** An edit-form input for a masked field: blank and masked until the eye is pressed; left closed, the saved value stays. */
+function wos_app_private_input( $lead, $name, $field, $value, $type, $label ) {
+	if ( '' === (string) $value ) {
+		return '<input type="text" name="' . esc_attr( $name ) . '" value="" aria-label="' . esc_attr( $label ) . '">';
+	}
+	$mask = 'email' === $type ? wos_mask_email( $value ) : wos_mask_phone( $value );
+	$keep = ']' === substr( $name, -1 ) ? substr( $name, 0, -1 ) . '_keep]' : $name . '_keep';
+	return '<span class="wos-private-in" data-lead="' . (int) $lead->id . '" data-field="' . esc_attr( $field ) . '"><input type="text" name="' . esc_attr( $name ) . '" value="" placeholder="' . esc_attr( $mask ) . '" aria-label="' . esc_attr( $label . ' (hidden; press the eye to show)' ) . '" readonly>'
+		. '<input type="hidden" name="' . esc_attr( $keep ) . '" value="1">' . wos_app_eye( $type ) . '</span>';
+}
+
 /** Details: grouped and read-only first; the form opens only to edit. */
 function wos_app_lead_details( $lead ) {
 	$stages = wos_lead_stages();
@@ -290,8 +426,8 @@ function wos_app_lead_details( $lead ) {
 	$groups   = array(
 		'Founder (main contact)' => array(
 			'Person' => $val( $lead->contact_name ),
-			'Email'  => $lead->email ? '<a href="mailto:' . esc_attr( $lead->email ) . '">' . esc_html( $lead->email ) . '</a>' : $val( '' ),
-			'Phone'  => $val( $lead->phone ),
+			'Email'  => wos_app_private( $lead, 'email', $lead->email, 'email' ),
+			'Phone'  => wos_app_private( $lead, 'phone', $lead->phone, 'phone' ),
 		),
 		'Source'    => array(
 			'Came from'  => $val( $lead->source ),
@@ -326,11 +462,11 @@ function wos_app_lead_details( $lead ) {
 				<div class="wos-group is-wide">
 					<h3>Other contacts</h3>
 					<div class="wos-people">
-						<?php foreach ( $lead->contacts as $c ) : ?>
+						<?php foreach ( $lead->contacts as $ci => $c ) : ?>
 							<div class="wos-person">
-								<strong><?php echo esc_html( $c['name'] ); ?></strong>
-								<span class="wos-pill is-grey"><?php echo esc_html( $c['role'] ); ?></span>
-								<span class="wos-small"><?php echo $c['email'] ? '<a href="mailto:' . esc_attr( $c['email'] ) . '">' . esc_html( $c['email'] ) . '</a>' : ''; ?><?php echo $c['email'] && $c['phone'] ? ' · ' : ''; ?><?php echo esc_html( $c['phone'] ); ?></span>
+								<div class="wos-person-top"><strong><?php echo esc_html( $c['name'] ); ?></strong><span class="wos-pill is-grey"><?php echo esc_html( $c['role'] ); ?></span></div>
+								<?php if ( $c['email'] ) : ?><div><?php echo wos_app_private( $lead, 'c' . (int) $ci . 'email', $c['email'], 'email' ); // phpcs:ignore -- escaped inside. ?></div><?php endif; ?>
+								<?php if ( $c['phone'] ) : ?><div><?php echo wos_app_private( $lead, 'c' . (int) $ci . 'phone', $c['phone'], 'phone' ); // phpcs:ignore -- escaped inside. ?></div><?php endif; ?>
 							</div>
 						<?php endforeach; ?>
 					</div>
@@ -347,8 +483,8 @@ function wos_app_lead_details( $lead ) {
 					<label class="wos-field"><span>Business name</span><input type="text" name="name" value="<?php echo esc_attr( $lead->name ); ?>"></label>
 					<div class="wos-field-row">
 						<label class="wos-field"><span>Founder</span><input type="text" name="contact_name" value="<?php echo esc_attr( $lead->contact_name ); ?>"></label>
-						<label class="wos-field"><span>Email</span><input type="text" name="email" value="<?php echo esc_attr( $lead->email ); ?>"></label>
-						<label class="wos-field"><span>Phone</span><input type="text" name="phone" value="<?php echo esc_attr( $lead->phone ); ?>"></label>
+						<div class="wos-field"><span>Email</span><?php echo wos_app_private_input( $lead, 'email', 'email', $lead->email, 'email', 'Email' ); // phpcs:ignore -- escaped inside. ?></div>
+						<div class="wos-field"><span>Phone</span><?php echo wos_app_private_input( $lead, 'phone', 'phone', $lead->phone, 'phone', 'Phone' ); // phpcs:ignore -- escaped inside. ?></div>
 					</div>
 				</fieldset>
 				<fieldset class="wos-contacts">
@@ -363,8 +499,8 @@ function wos_app_lead_details( $lead ) {
 							<label class="wos-field"><span>Role</span><select name="contacts[<?php echo (int) $i; ?>][role]">
 								<?php foreach ( wos_lead_contact_roles() as $r ) : ?><option <?php selected( $r, $c['role'] ); ?>><?php echo esc_html( $r ); ?></option><?php endforeach; ?>
 							</select></label>
-							<label class="wos-field"><span>Email</span><input type="text" name="contacts[<?php echo (int) $i; ?>][email]" value="<?php echo esc_attr( $c['email'] ); ?>"></label>
-							<label class="wos-field"><span>Phone</span><input type="text" name="contacts[<?php echo (int) $i; ?>][phone]" value="<?php echo esc_attr( $c['phone'] ); ?>"></label>
+							<div class="wos-field"><span>Email</span><?php echo wos_app_private_input( $lead, 'contacts[' . (int) $i . '][email]', 'c' . (int) $i . 'email', $c['email'], 'email', 'Email' ); // phpcs:ignore -- escaped inside. ?></div>
+							<div class="wos-field"><span>Phone</span><?php echo wos_app_private_input( $lead, 'contacts[' . (int) $i . '][phone]', 'c' . (int) $i . 'phone', $c['phone'], 'phone', 'Phone' ); // phpcs:ignore -- escaped inside. ?></div>
 						</div>
 					<?php endforeach; ?>
 					<p class="wos-muted wos-small">To remove someone, clear the name. <button type="button" class="wos-btn is-text is-small" data-add-contact>+ Add another person</button></p>
@@ -477,52 +613,110 @@ function wos_app_lead_tab_proposal( $lead ) {
 
 function wos_app_lead_tab_intake( $lead ) {
 	$vals    = isset( $lead->intake['values'] ) ? $lead->intake['values'] : array();
-	$srcs    = array( 'interview' => 'Interview', 'client' => 'Client-filled', 'assessment' => 'From assessment' );
+	$srcs    = array( 'interview' => 'Interview', 'client' => 'Client', 'assessment' => 'Assessment' );
 	$done    = ! empty( $lead->checks['intake'] );
 	$request = ! empty( $lead->intake['requested'] );
+	$fields  = wos_lead_intake_fields();
+	$units   = array();
+	foreach ( wos_lead_intake_ask() as $k => $a ) {
+		$units[ $k ] = 'number' === $a[2] ? $a[3] : '';
+	}
+	$empty   = ! array_filter( $vals, function ( $v ) { return '' !== (string) $v['v']; } );
+	$src_tag = function ( $k ) use ( $vals, $srcs ) {
+		$sk = isset( $vals[ $k ]['src'] ) && isset( $srcs[ $vals[ $k ]['src'] ] ) ? $vals[ $k ]['src'] : 'interview';
+		return '<span class="wos-src is-' . esc_attr( $sk ) . '">' . esc_html( $srcs[ $sk ] ) . '</span>';
+	};
+	$v = function ( $k ) use ( $vals ) {
+		return isset( $vals[ $k ]['v'] ) ? (string) $vals[ $k ]['v'] : '';
+	};
 	?>
 	<?php if ( $request ) : ?>
 		<section class="wos-card wos-pad">
 			<h2>Online intake for the client</h2>
 			<?php if ( ! empty( $lead->intake['client_at'] ) ) : ?>
-				<p class="wos-ok-box">The client filled it in on <?php echo esc_html( substr( $lead->intake['client_at'], 0, 10 ) ); ?>. Their answers are below, marked Client-filled.</p>
+				<p class="wos-ok-box">The client filled it in on <?php echo esc_html( wos_app_short_date( $lead->intake['client_at'] ) ); ?>. Their answers are tagged Client below.</p>
 			<?php else : ?>
 				<p class="wos-muted">Send this link to the client. It opens without signing in and shows only the intake questions.</p>
 				<input class="wos-copy" type="text" readonly value="<?php echo esc_attr( wos_lead_client_url( $lead ) ); ?>" onclick="this.select()">
 			<?php endif; ?>
 		</section>
 	<?php endif; ?>
-	<?php wos_app_lead_form_open( $lead, 'wos_lead_intake', '' ); ?>
-	<div class="wos-row wos-top">
-		<?php foreach ( array( 'profile' => 'As-is profile', 'baseline' => 'Baseline: 5 numbers' ) as $g => $title ) : ?>
-			<section class="wos-card wos-pad wos-col-main">
-				<h2><?php echo esc_html( $title ); ?></h2>
-				<?php if ( 'baseline' === $g ) : ?><p class="wos-muted wos-small">Measured again at 30, 60 and 90 days.</p><?php endif; ?>
-				<?php foreach ( wos_lead_intake_fields() as $k => $f ) : ?>
-					<?php
-					if ( $f[1] !== $g ) {
-						continue;
-					}
-					$v   = isset( $vals[ $k ]['v'] ) ? $vals[ $k ]['v'] : '';
-					$src = isset( $vals[ $k ]['src'] ) ? $vals[ $k ]['src'] : 'interview';
-					?>
-					<div class="wos-setting">
-						<span><?php echo esc_html( $f[0] ); ?></span>
-						<input type="text" name="f[<?php echo esc_attr( $k ); ?>][v]" value="<?php echo esc_attr( $v ); ?>" aria-label="<?php echo esc_attr( $f[0] ); ?>">
-						<select name="f[<?php echo esc_attr( $k ); ?>][src]" aria-label="<?php echo esc_attr( $f[0] . ' source' ); ?>">
-							<?php foreach ( $srcs as $sk => $sl ) : ?><option value="<?php echo esc_attr( $sk ); ?>" <?php selected( $sk, $src ); ?>><?php echo esc_html( $sl ); ?></option><?php endforeach; ?>
-						</select>
-					</div>
-				<?php endforeach; ?>
-			</section>
-		<?php endforeach; ?>
-	</div>
-	<div class="wos-actions">
-		<button class="wos-btn is-ghost" type="submit" name="do" value="save">Save</button>
-		<?php if ( ! $request ) : ?><button class="wos-btn is-ghost" type="submit" name="do" value="online">Let the client fill it online</button><?php endif; ?>
-		<?php if ( ! $done ) : ?><button class="wos-btn" type="submit" name="do" value="complete">Intake complete</button><?php else : ?><span class="wos-pill is-green">Complete</span><?php endif; ?>
-	</div>
-	</form>
+	<section class="wos-card wos-pad">
+		<div class="wos-card-head">
+			<h2>Intake</h2>
+			<span class="wos-card-pills"><?php echo $done ? wos_app_lead_pill( 'Complete · ' . wos_app_short_date( $lead->checks['intake'] ), 'green' ) : wos_app_lead_pill( 'Not complete', 'grey' ); // phpcs:ignore -- escaped inside. ?><button type="button" class="wos-btn is-ghost is-small" data-toggle="wos-intake-edit" data-hide="wos-intake-view"<?php echo $empty ? ' hidden' : ''; ?>>Edit</button></span>
+		</div>
+		<div id="wos-intake-view"<?php echo $empty ? ' hidden' : ''; ?>>
+			<div class="wos-two">
+				<div>
+					<div class="wos-label">As-is profile</div>
+					<table class="wos-kv-table">
+						<?php foreach ( $fields as $k => $f ) : ?>
+							<?php if ( 'profile' !== $f[1] ) { continue; } ?>
+							<tr><td class="is-l"><?php echo esc_html( preg_replace( '/ \(1 to 5\)$/', '', $f[0] ) ); ?></td><td><?php echo '' !== $v( $k ) ? esc_html( $v( $k ) . ( 'maturity' === $k ? ' / 5' : '' ) ) : '<span class="wos-empty">Not set</span>'; ?></td><td class="is-src"><?php echo '' !== $v( $k ) ? $src_tag( $k ) : ''; // phpcs:ignore -- escaped inside. ?></td></tr>
+						<?php endforeach; ?>
+					</table>
+				</div>
+				<div>
+					<div class="wos-label">Baseline · measured again at 30, 60, 90 days</div>
+					<table class="wos-kv-table">
+						<thead><tr><th>Number</th><th class="num">Start</th><th class="num">30 d</th><th class="num">60 d</th><th class="num">90 d</th><th></th></tr></thead>
+						<?php foreach ( $fields as $k => $f ) : ?>
+							<?php if ( 'baseline' !== $f[1] ) { continue; } ?>
+							<tr>
+								<td class="is-l"><?php echo esc_html( $f[0] ); ?></td>
+								<td class="num"><?php echo '' !== $v( $k ) ? esc_html( $v( $k ) ) : '<span class="wos-dash">–</span>'; ?></td>
+								<?php foreach ( array( 'd30', 'd60', 'd90' ) as $d ) : ?>
+									<td class="num"><?php echo ! empty( $vals[ $k ][ $d ] ) ? esc_html( $vals[ $k ][ $d ] ) : '<span class="wos-dash">–</span>'; ?></td>
+								<?php endforeach; ?>
+								<td class="is-src"><?php echo '' !== $v( $k ) ? $src_tag( $k ) : ''; // phpcs:ignore -- escaped inside. ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</table>
+				</div>
+			</div>
+			<div class="wos-legend">Source: <span class="wos-src is-interview">Interview</span> <span class="wos-src is-client">Client</span> filled online <span class="wos-src is-assessment">Assessment</span></div>
+		</div>
+		<div id="wos-intake-edit"<?php echo $empty ? '' : ' hidden'; ?>>
+			<?php wos_app_lead_form_open( $lead, 'wos_lead_intake', '' ); ?>
+				<div class="wos-two">
+					<?php foreach ( array( 'profile' => 'As-is profile', 'baseline' => 'Baseline (start values)' ) as $g => $title ) : ?>
+						<div>
+							<div class="wos-label"><?php echo esc_html( $title ); ?></div>
+							<table class="wos-kv-table is-edit">
+								<?php foreach ( $fields as $k => $f ) : ?>
+									<?php
+									if ( $f[1] !== $g ) {
+										continue;
+									}
+									$src = isset( $vals[ $k ]['src'] ) ? $vals[ $k ]['src'] : 'interview';
+									?>
+									<tr>
+										<td class="is-l"><label for="in-<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $f[0] ); ?></label><?php echo $units[ $k ] ? '<small>' . esc_html( $units[ $k ] ) . '</small>' : ''; ?></td>
+										<td><input type="text" id="in-<?php echo esc_attr( $k ); ?>" name="f[<?php echo esc_attr( $k ); ?>][v]" value="<?php echo esc_attr( $v( $k ) ); ?>"<?php echo 'baseline' === $g || 'maturity' === $k ? ' class="wos-num" inputmode="decimal"' : ''; ?>></td>
+										<td><select name="f[<?php echo esc_attr( $k ); ?>][src]" aria-label="<?php echo esc_attr( $f[0] . ': source' ); ?>">
+											<?php foreach ( $srcs as $sk => $sl ) : ?><option value="<?php echo esc_attr( $sk ); ?>" <?php selected( $sk, $src ); ?>><?php echo esc_html( $sl ); ?></option><?php endforeach; ?>
+										</select></td>
+									</tr>
+								<?php endforeach; ?>
+							</table>
+						</div>
+					<?php endforeach; ?>
+				</div>
+				<div class="wos-actions wos-mt">
+					<button class="wos-btn" type="submit" name="do" value="save">Save</button>
+					<?php if ( ! $request ) : ?><button class="wos-btn is-ghost" type="submit" name="do" value="online">Let the client fill it online</button><?php endif; ?>
+					<?php if ( ! $empty ) : ?><button class="wos-btn is-text" type="button" data-toggle="wos-intake-edit" data-hide="wos-intake-view">Cancel</button><?php endif; ?>
+				</div>
+			</form>
+		</div>
+		<?php if ( ! $done && ! $empty ) : ?>
+			<?php wos_app_lead_form_open( $lead, 'wos_lead_intake', 'wos-inline wos-mt' ); ?>
+				<input type="hidden" name="do" value="complete">
+				<button class="wos-btn" type="submit">Intake complete</button><span class="wos-muted wos-small">Next: the discovery summary.</span>
+			</form>
+		<?php endif; ?>
+	</section>
 	<?php
 }
 
@@ -621,15 +815,100 @@ function wos_app_lead_tab_price( $lead ) {
 	<?php
 }
 
+/** One icon and colour per kind of work in the log. */
+function wos_app_log_icon( $kind ) {
+	$p = array(
+		'check'  => '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+		'x'      => '<path d="M6 6l12 12M18 6L6 18"/>',
+		'send'   => '<path d="M4 12l16-8-6 16-3-7z"/>',
+		'link'   => '<path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
+		'pen'    => '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
+		'doc'    => '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 13l2 2 4-4"/>',
+		'clock'  => '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+		'money'  => '<path d="M12 3v18M16.5 7.5c-1-1.2-2.6-1.8-4.5-1.8-2.5 0-4 1.3-4 3s1.5 2.5 4 3 4 1.3 4 3-1.5 3-4 3c-2 0-3.6-.7-4.6-2"/>',
+		'clip'   => '<path d="M9 4h6v3H9z"/><path d="M7 5H5v16h14V5h-2"/><path d="M9 12h6M9 16h4"/>',
+		'note'   => '<path d="M5 5h14v10H9l-4 4z"/>',
+		'star'   => '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
+		'eye'    => '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',
+		'person' => '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+	);
+	$k = array(
+		'approved'   => array( 'check', '#1D7347' ),
+		'decided'    => array( 'check', '#1D7347' ),
+		'rejected'   => array( 'x', '#B42318' ),
+		'sent'       => array( 'send', '#2563A8' ),
+		'link'       => array( 'link', '#2563A8' ),
+		'client'     => array( 'person', '#2563A8' ),
+		'signed'     => array( 'pen', '#7A3FB0' ),
+		'confirmed'  => array( 'doc', '#7A3FB0' ),
+		'hours'      => array( 'clock', '#B7791F' ),
+		'invoice'    => array( 'money', '#0F766E' ),
+		'assessment' => array( 'clip', '#C61A85' ),
+		'won'        => array( 'star', '#C61A85' ),
+		'viewed'     => array( 'eye', '#627583' ),
+		'edit'       => array( 'pen', '#627583' ),
+		'note'       => array( 'note', '#627583' ),
+	);
+	$i = isset( $k[ $kind ] ) ? $k[ $kind ] : $k['note'];
+	return array( $i[1], '<svg viewBox="0 0 24 24" aria-hidden="true">' . $p[ $i[0] ] . '</svg>' );
+}
+
 function wos_app_lead_tab_log( $lead ) {
-	echo '<section class="wos-card wos-pad"><h2>Log</h2>';
-	if ( ! $lead->log ) {
-		echo '<p class="wos-muted">Nothing yet.</p>';
-	}
-	foreach ( array_reverse( $lead->log ) as $e ) {
-		printf( '<div class="wos-line"><span>%s</span><span class="wos-muted wos-small">%s · %s</span></div>', esc_html( $e['text'] ), esc_html( $e['by'] ), esc_html( substr( $e['at'], 0, 16 ) ) );
-	}
-	echo '</section>';
+	$kinds  = wos_lead_log_kinds();
+	$groups = array(
+		'all'       => 'All',
+		'decisions' => 'Decisions',
+		'client'    => 'Client',
+		'documents' => 'Documents',
+		'hours'     => 'Hours',
+		'other'     => 'Other',
+	);
+	?>
+	<section class="wos-card wos-pad">
+		<div class="wos-card-head wos-log-head">
+			<h2>Log</h2>
+			<?php if ( $lead->log ) : ?>
+				<div class="wos-filter" role="group" aria-label="Show">
+					<?php foreach ( $groups as $gk => $gl ) : ?>
+						<button type="button" class="<?php echo 'all' === $gk ? 'is-on' : ''; ?>" data-log-filter="<?php echo esc_attr( $gk ); ?>" aria-pressed="<?php echo 'all' === $gk ? 'true' : 'false'; ?>"><?php echo esc_html( $gl ); ?></button>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</div>
+		<?php if ( ! $lead->log ) : ?>
+			<p class="wos-muted">Nothing yet.</p>
+		<?php else : ?>
+			<div class="wos-tl">
+				<?php
+				$day   = '';
+				$today = substr( wos_now(), 0, 10 );
+				foreach ( array_reverse( $lead->log ) as $e ) :
+					$kind = wos_lead_log_kind( $e );
+					list( $color, $svg ) = wos_app_log_icon( $kind );
+					$d = substr( (string) $e['at'], 0, 10 );
+					if ( $d !== $day ) :
+						$day = $d;
+						?>
+						<div class="wos-tl-day"><?php echo esc_html( strtoupper( ( $d === $today ? 'Today · ' : '' ) . wos_app_short_date( $d ) ) ); ?></div>
+					<?php endif; ?>
+					<?php
+					// "Ticked: NDA, if they share confidential data." reads better as its subject alone.
+					$text  = preg_replace( '/^Ticked: ([^,.]+).*$/', '$1 ticked', (string) $e['text'] );
+					$parts = explode( ': ', $text, 2 );
+					$title = rtrim( $parts[0], '.' );
+					$desc  = isset( $parts[1] ) ? $parts[1] : '';
+					?>
+					<div class="wos-tl-ev<?php echo in_array( $kind, array( 'approved', 'won' ), true ) ? ' is-big' : ''; ?>" style="--c: <?php echo esc_attr( $color ); ?>" data-group="<?php echo esc_attr( $kinds[ $kind ][1] ); ?>">
+						<span class="wos-tl-ic"><?php echo $svg; // phpcs:ignore -- fixed markup. ?></span>
+						<div class="wos-tl-w"><?php echo esc_html( $title ); ?><span class="wos-tl-t"><?php echo esc_html( $kinds[ $kind ][0] ); ?></span></div>
+						<?php if ( '' !== $desc ) : ?><div class="wos-tl-d"><?php echo esc_html( $desc ); ?></div><?php endif; ?>
+						<div class="wos-tl-m"><b><?php echo esc_html( substr( (string) $e['at'], 11, 5 ) ); ?></b><?php echo esc_html( $e['by'] ); ?></div>
+					</div>
+				<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+	</section>
+	<?php
 }
 
 /* ---------- Ask Claude panel ---------- */
