@@ -15,7 +15,7 @@ add_action( 'admin_post_wos_seed', function () {
 	}
 	wos_seed();
 	wos_flash( 'Starter data loaded. Check every amount marked "placeholder".' );
-	wp_safe_redirect( wos_url( 'wizad-os' ) );
+	wp_safe_redirect( wos_url( 'wizad-os', array( 'classic' => 1 ) ) );
 	exit;
 } );
 

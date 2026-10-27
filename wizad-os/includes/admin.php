@@ -3,7 +3,15 @@ defined( 'ABSPATH' ) || exit;
 
 add_action( 'admin_menu', function () {
 	add_menu_page( 'WIZAD OS', 'WIZAD OS', WOS_CAP, 'wizad-os', 'wos_render_dashboard', 'dashicons-chart-area', 2 );
-	add_submenu_page( 'wizad-os', 'Home', 'Home', WOS_CAP, 'wizad-os', 'wos_render_dashboard' );
+	$home = add_submenu_page( 'wizad-os', 'Home', 'Home', WOS_CAP, 'wizad-os', 'wos_render_dashboard' );
+	// The app is home now. The old dashboard (income, expenses, GST) stays one click away until Sprint D.
+	add_action( 'load-' . $home, function () {
+		if ( empty( $_GET['classic'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- read-only view switch.
+			wp_safe_redirect( wos_app_url() );
+			exit;
+		}
+	} );
+	add_submenu_page( 'wizad-os', 'Old dashboard', 'Old dashboard', WOS_CAP, 'admin.php?page=wizad-os&classic=1' );
 	add_submenu_page( 'wizad-os', 'Delivery board', 'Board', WOS_CAP, 'wos-board', 'wos_render_board' );
 	foreach ( array( 'clients', 'deals', 'projects' ) as $e ) {
 		$def = wos_entity( $e );

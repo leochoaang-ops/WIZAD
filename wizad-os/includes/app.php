@@ -486,7 +486,7 @@ function wos_app_coming( $screen ) {
 	</div>
 	<section class="wos-card wos-pad">
 		<p><?php echo esc_html( $screen[2] ); ?></p>
-		<p class="wos-muted">This screen is designed and approved; it is built in <?php echo esc_html( $screen[1] ); ?>. Until then the older screens stay in <a href="<?php echo esc_url( wos_url( 'wizad-os' ) ); ?>">WordPress admin</a>.</p>
+		<p class="wos-muted">This screen is designed and approved; it is built in <?php echo esc_html( $screen[1] ); ?>. Until then the older screens stay in <a href="<?php echo esc_url( wos_url( 'wizad-os', array( 'classic' => 1 ) ) ); ?>">WordPress admin</a>.</p>
 	</section>
 	<?php
 }
