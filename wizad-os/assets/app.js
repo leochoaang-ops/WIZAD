@@ -137,3 +137,23 @@ document.addEventListener( 'click', function ( e ) {
 		}
 	}
 } );
+
+/* Other contacts: add an empty row. */
+document.addEventListener( 'click', function ( e ) {
+	var btn = e.target.closest( '[data-add-contact]' );
+	if ( ! btn ) {
+		return;
+	}
+	var box = btn.closest( '.wos-contacts' );
+	var rows = box.querySelectorAll( '.wos-contact-row' );
+	var row = rows[ rows.length - 1 ].cloneNode( true );
+	var n = rows.length;
+	row.querySelectorAll( 'input, select' ).forEach( function ( el ) {
+		el.name = el.name.replace( /contacts\[\d+\]/, 'contacts[' + n + ']' );
+		if ( 'INPUT' === el.tagName ) {
+			el.value = '';
+		}
+	} );
+	rows[ rows.length - 1 ].after( row );
+	row.querySelector( 'input' ).focus();
+} );

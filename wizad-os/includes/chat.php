@@ -159,6 +159,9 @@ function wos_chat_lead_text( $l, $full = true ) {
 		return $t . "\n";
 	}
 	$t .= "\n  Contact: " . $l->contact_name . ' · source: ' . $l->source . ' · introducer: ' . $l->introducer . ' · owner: ' . $l->owner . ' · value ' . (float) $l->value . ' at ' . (int) $l->win . '%';
+	foreach ( $l->contacts as $c ) {
+		$t .= "\n  Other contact: " . $c['name'] . ' (' . $c['role'] . ')' . ( $c['email'] ? ' ' . $c['email'] : '' ) . ( $c['phone'] ? ' ' . $c['phone'] : '' );
+	}
 	if ( $l->scores ) {
 		$parts = array();
 		foreach ( wos_lead_score_areas() as $k => $label ) {
