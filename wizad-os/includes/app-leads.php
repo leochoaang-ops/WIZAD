@@ -344,10 +344,11 @@ function wos_app_lead_tab_proposal( $lead ) {
 					</div>
 				</form>
 				<?php if ( ! $sent ) : ?>
-					<?php wos_app_lead_form_open( $lead, 'wos_lead_prelim_draft', 'wos-inline' ); ?>
-						<button class="wos-btn is-text" type="submit" <?php disabled( ! wos_claude_key() ); ?>>Draft it with Claude</button>
-						<?php if ( ! wos_claude_key() ) : ?><span class="wos-muted wos-small">Needs the Claude API key in Settings.</span><?php endif; ?>
-					</form>
+					<?php if ( wos_claude_key() ) : ?>
+						<?php wos_app_lead_form_open( $lead, 'wos_lead_prelim_draft', 'wos-inline' ); ?>
+							<button class="wos-btn is-text" type="submit">Draft it with Claude</button>
+						</form>
+					<?php endif; ?>
 				<?php endif; ?>
 			</section>
 			<?php if ( $p['see'] ) : ?>
@@ -535,8 +536,11 @@ function wos_app_lead_tab_log( $lead ) {
 /* ---------- Ask Claude panel ---------- */
 
 function wos_app_chat_panel( $scope, $title, $suggest = array() ) {
-	$history = wos_chat_history( 'chat:' . $scope, 20 );
 	$has_key = (bool) wos_claude_key();
+	if ( ! $has_key ) {
+		return; // Ask Claude is optional; without a key the panel stays out of the way.
+	}
+	$history = wos_chat_history( 'chat:' . $scope, 20 );
 	?>
 	<section class="wos-chat" data-scope="<?php echo esc_attr( $scope ); ?>" data-url="<?php echo esc_url( rest_url( 'wos/v1/chat' ) ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>">
 		<div class="wos-chat-head"><span><?php echo esc_html( $title ); ?></span><span class="wos-chat-tag">Reads WOS data</span></div>

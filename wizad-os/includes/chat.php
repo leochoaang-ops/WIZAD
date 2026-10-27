@@ -257,6 +257,25 @@ function wos_chat_scope_ok( $scope ) {
 }
 
 add_action( 'rest_api_init', function () {
+	// The same data as text, for Claude working outside WOS (Leo asks in the WIZAD project instead of paying per question).
+	register_rest_route( 'wos/v1', '/context', array(
+		array(
+			'methods'             => 'GET',
+			'permission_callback' => function () {
+				return current_user_can( WOS_CAP );
+			},
+			'callback'            => function ( WP_REST_Request $req ) {
+				$scope = (string) $req->get_param( 'scope' );
+				if ( '' === $scope ) {
+					$scope = 'today';
+				}
+				if ( ! wos_chat_scope_ok( $scope ) ) {
+					return new WP_Error( 'wos_scope', 'Use today, decision:<id> or lead:<id>.', array( 'status' => 400 ) );
+				}
+				return rest_ensure_response( array( 'scope' => $scope, 'context' => wos_chat_context( $scope ) ) );
+			},
+		),
+	) );
 	register_rest_route( 'wos/v1', '/chat', array(
 		array(
 			'methods'             => 'POST',

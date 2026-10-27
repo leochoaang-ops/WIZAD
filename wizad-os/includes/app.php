@@ -356,10 +356,12 @@ function wos_app_decisions_waiting() {
 					<button class="wos-btn is-text" type="submit">Withdraw</button>
 				</form>
 			</div>
-			<details class="wos-ask">
-				<summary>Ask Claude about this decision</summary>
-				<?php wos_app_chat_panel( 'decision:' . $d->id, 'Ask Claude about this', array( 'What are the risks of the recommended option?', 'What would you need to know to be sure?' ) ); ?>
-			</details>
+			<?php if ( wos_claude_key() ) : ?>
+				<details class="wos-ask">
+					<summary>Ask Claude about this decision</summary>
+					<?php wos_app_chat_panel( 'decision:' . $d->id, 'Ask Claude about this', array( 'What are the risks of the recommended option?', 'What would you need to know to be sure?' ) ); ?>
+				</details>
+			<?php endif; ?>
 		</article>
 		<?php
 	endforeach;
@@ -540,8 +542,8 @@ function wos_app_settings_claude() {
 	$const = defined( 'WOS_CLAUDE_KEY' ) && WOS_CLAUDE_KEY;
 	?>
 	<section class="wos-card wos-pad" id="claude">
-		<h2>Ask Claude</h2>
-		<p class="wos-muted">The chat on Today, on each decision and on each lead file, and the first draft of a preliminary proposal. It reads WOS data and says where each answer comes from. Model: <span class="wos-mono"><?php echo esc_html( WOS_CLAUDE_MODEL ); ?></span>.</p>
+		<h2>Ask Claude (optional)</h2>
+		<p class="wos-muted">Off by default: Leo asks Claude in the WIZAD project, which reads WOS and costs nothing extra. With an API key (paid per question), a chat appears on Today, on each decision and on each lead file, and the first draft of a preliminary proposal. It reads WOS data and says where each answer comes from. Model: <span class="wos-mono"><?php echo esc_html( WOS_CLAUDE_MODEL ); ?></span>.</p>
 		<div class="wos-line"><span>API key</span><strong class="wos-mono"><?php echo esc_html( $key ? 'Saved · ends in ' . substr( $key, -4 ) . ( $const ? ' (set in wp-config.php)' : '' ) : 'Not set · Ask Claude is off' ); ?></strong></div>
 		<div class="wos-line"><span>This month</span><span class="wos-mono"><?php echo esc_html( $usage['questions'] . ' questions · ' . number_format( $usage['in'] + $usage['out'] ) . ' tokens · about $' . number_format( $usage['usd'], 2 ) . ' USD' ); ?></span></div>
 		<?php if ( current_user_can( 'manage_options' ) && ! $const ) : ?>
