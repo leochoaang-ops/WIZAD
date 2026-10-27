@@ -490,3 +490,33 @@ function wos_app_coming( $screen ) {
 	</section>
 	<?php
 }
+
+/* ---------- Sign-in screen in the WOS look ---------- */
+
+add_action( 'login_enqueue_scripts', function () {
+	wp_enqueue_style( 'wos-fonts', 'https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Public+Sans:wght@400;600&display=swap', array(), null );
+	wp_enqueue_style( 'wos-login', WOS_URL . 'assets/login.css', array( 'login' ), WOS_VERSION );
+}, 20 );
+
+add_filter( 'login_headerurl', function () {
+	return wos_app_url();
+} );
+add_filter( 'login_headertext', function () {
+	return 'Sign in to WIZAD OS';
+} );
+
+add_action( 'login_header', function () {
+	?>
+	<aside class="wos-login-brand">
+		<div>
+			<div class="mark"><svg viewBox="0 0 332 332" aria-hidden="true"><g transform="translate(0 15)"><path fill="#FFFFFF" d="M0 0H160V172H83V302H0Z"/><rect x="172" y="0" width="160" height="172" fill="#C61A85"/><rect x="95" y="184" width="237" height="118" fill="#FFFFFF"/></g></svg>WIZAD</div>
+			<div class="tag">WOS · OPERATING SYSTEM</div>
+		</div>
+		<div>
+			<h2>Run the day from one place.</h2>
+			<p>Decisions, clients, sprints, time and money for the WIZAD team.</p>
+		</div>
+		<small>Private system. Sign-ins are logged.</small>
+	</aside>
+	<?php
+} );

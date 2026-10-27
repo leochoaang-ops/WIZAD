@@ -1,0 +1,76 @@
+/* WOS sign-in screen. Self-contained: does not rely on WordPress's own login styles. */
+body.login {
+	margin: 0; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch;
+	background: #EDF1F3; color: #1E262B; font: 15px/1.5 'Public Sans', system-ui, sans-serif;
+}
+.wos-login-brand {
+	flex: 1 1 380px; max-width: 520px; background: #3F494F; color: #FFFFFF; padding: 48px;
+	display: flex; flex-direction: column; justify-content: space-between; gap: 32px; box-sizing: border-box;
+}
+.wos-login-brand .mark { display: flex; align-items: center; gap: 12px; font: 800 28px/1 Archivo, sans-serif; letter-spacing: .02em; }
+.wos-login-brand svg { width: 40px; height: 40px; }
+.wos-login-brand .tag { font: 600 13px/1.4 Archivo, sans-serif; letter-spacing: .14em; color: #FAA9D7; margin-top: 12px; }
+.wos-login-brand h2 { margin: 0; font: 800 36px/1.15 Archivo, sans-serif; }
+.wos-login-brand p { margin: 12px 0 0; color: #D3DBE0; font-size: 16px; max-width: 360px; }
+.wos-login-brand small { color: #B9C4CB; font-size: 13px; }
+
+#login { flex: 1 1 400px; width: auto; max-width: 440px; margin: auto; padding: 48px 32px; box-sizing: border-box; }
+.login h1 { margin: 0 0 24px; text-align: left; }
+.login h1 a {
+	display: block; width: auto; height: auto; margin: 0; background: none; text-indent: 0; overflow: visible;
+	font: 800 30px/1.2 Archivo, sans-serif; color: #1E262B; text-decoration: none; pointer-events: none;
+}
+.login h1 a::before { content: "Sign in"; }
+.login h1 a { font-size: 0; }
+.login h1 a::before { font-size: 30px; }
+.login h1::after { content: none; }
+
+.login form {
+	margin: 0; padding: 28px; background: #FFFFFF; border: 1px solid #D5DDE2; border-radius: 4px;
+	box-shadow: none; overflow: visible;
+}
+.login form p, .login form .user-pass-wrap { margin: 0 0 18px; }
+.login label { display: block; font-size: 14px; font-weight: 600; color: #1E262B; margin-bottom: 6px; line-height: 1.4; }
+.login input[type=text], .login input[type=password], .login input[type=email] {
+	display: block; width: 100%; box-sizing: border-box; min-height: 48px; margin: 0; padding: 10px 12px;
+	font: 400 16px/1.4 'Public Sans', system-ui, sans-serif; color: #1E262B;
+	background: #FFFFFF; border: 1px solid #8796A1; border-radius: 2px; box-shadow: none; outline: none;
+}
+.login input[type=text]:focus, .login input[type=password]:focus { border-color: #C61A85; box-shadow: 0 0 0 3px #FBE7F2; }
+.login .wp-pwd { position: relative; }
+.login .wp-pwd input[type=password], .login .wp-pwd input[type=text] { padding-right: 56px; }
+.login .button.wp-hide-pw {
+	position: absolute; top: 0; right: 0; width: 48px; height: 48px; min-height: 48px; margin: 0; padding: 0;
+	background: transparent; border: 0; box-shadow: none; color: #44525C; cursor: pointer;
+}
+.login .button.wp-hide-pw:focus-visible { outline: 3px solid #FAA9D7; outline-offset: -3px; }
+.login .forgetmenot { display: flex; align-items: center; gap: 8px; margin: 0 0 20px; float: none; }
+.login .forgetmenot label { margin: 0; font-weight: 400; display: inline; }
+.login input[type=checkbox] { width: 18px; height: 18px; margin: 0; accent-color: #C61A85; }
+.login .submit { margin: 0; padding: 0; }
+.login .button-primary, .wp-core-ui .button-primary {
+	float: none; display: block; width: 100%; min-height: 48px; margin: 0; padding: 12px 20px;
+	font: 600 16px/1 'Public Sans', system-ui, sans-serif; color: #FFFFFF; text-shadow: none;
+	background: #C61A85; border: 0; border-radius: 2px; box-shadow: none; cursor: pointer;
+}
+.login .button-primary:hover, .login .button-primary:focus { background: #B0166F; color: #FFFFFF; }
+.login .button-primary:focus-visible { outline: 3px solid #FAA9D7; outline-offset: 2px; }
+
+.login #nav, .login #backtoblog { margin: 16px 0 0; padding: 0; font-size: 14px; }
+.login #nav a { color: #B0166F; font-weight: 600; text-decoration: none; }
+.login #nav a:hover { color: #1E262B; text-decoration: underline; }
+.login #backtoblog, .language-switcher, .login .privacy-policy-page-link { display: none; }
+
+.login .message, .login .notice, .login .success, .login #login_error {
+	margin: 0 0 16px; padding: 12px 16px; background: #FFFFFF; border: 1px solid #D5DDE2; border-left: 4px solid #C61A85;
+	box-shadow: none; font-size: 14px;
+}
+.login #login_error { border-left-color: #B42318; background: #FDE7E5; color: #B42318; }
+.login .wos-login-foot { margin-top: 24px; font-size: 13px; color: #44525C; }
+.screen-reader-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (max-width: 760px) {
+	.wos-login-brand { max-width: none; flex: 0 0 100%; padding: 20px 16px; gap: 0; justify-content: flex-start; }
+	.wos-login-brand h2, .wos-login-brand p, .wos-login-brand small { display: none; }
+	#login { padding: 32px 16px; max-width: none; }
+}
