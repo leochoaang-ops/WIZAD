@@ -37,6 +37,7 @@ body.login {
 	background: #FFFFFF; border: 1px solid #8796A1; border-radius: 2px; box-shadow: none; outline: none;
 }
 .login input[type=text]:focus, .login input[type=password]:focus { border-color: #C61A85; box-shadow: 0 0 0 3px #FBE7F2; }
+.login input.authcode { margin-bottom: 18px; letter-spacing: .2em; }
 .login .wp-pwd { position: relative; }
 .login .wp-pwd input[type=password], .login .wp-pwd input[type=text] { padding-right: 56px; }
 .login .button.wp-hide-pw {
