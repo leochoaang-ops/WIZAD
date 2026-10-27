@@ -70,6 +70,8 @@ body.login {
 .screen-reader-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 @media (max-width: 760px) {
+	body.login { align-content: flex-start; }
+	#login { margin: 0 auto; }
 	.wos-login-brand { max-width: none; flex: 0 0 100%; padding: 20px 16px; gap: 0; justify-content: flex-start; }
 	.wos-login-brand h2, .wos-login-brand p, .wos-login-brand small { display: none; }
 	#login { padding: 32px 16px; max-width: none; }
