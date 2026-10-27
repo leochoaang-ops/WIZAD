@@ -71,7 +71,7 @@ function wos_lead_summary_parts() {
 /* ---------- Data ---------- */
 
 function wos_lead_json_cols() {
-	return array( 'scores', 'answers', 'checks', 'prelim', 'intake', 'summary', 'log' );
+	return array( 'scores', 'answers', 'checks', 'prelim', 'intake', 'summary', 'log', 'contacts' );
 }
 
 function wos_lead_prepare( $row ) {
@@ -259,6 +259,31 @@ function wos_lead_request() {
 	return $lead;
 }
 
+/** Roles offered for the people at a B2B client. */
+function wos_lead_contact_roles() {
+	return array( 'Assistant', 'Technical', 'Finance / billing', 'Co-founder / partner', 'Other' );
+}
+
+/** Other contacts from the form: rows without a name are dropped. */
+function wos_lead_contacts_from_post() {
+	$rows = isset( $_POST['contacts'] ) && is_array( $_POST['contacts'] ) ? wp_unslash( $_POST['contacts'] ) : array(); // phpcs:ignore -- nonce checked in wos_lead_request(); cleaned below.
+	$out  = array();
+	foreach ( $rows as $r ) {
+		$name = isset( $r['name'] ) ? sanitize_text_field( $r['name'] ) : '';
+		if ( '' === $name ) {
+			continue;
+		}
+		$role  = isset( $r['role'] ) ? sanitize_text_field( $r['role'] ) : '';
+		$out[] = array(
+			'name'  => $name,
+			'role'  => in_array( $role, wos_lead_contact_roles(), true ) ? $role : 'Other',
+			'email' => isset( $r['email'] ) ? sanitize_email( $r['email'] ) : '',
+			'phone' => isset( $r['phone'] ) ? sanitize_text_field( $r['phone'] ) : '',
+		);
+	}
+	return array_slice( $out, 0, 20 );
+}
+
 function wos_post_text( $key, $multi = false ) {
 	if ( ! isset( $_POST[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- checked by the caller.
 		return '';
@@ -334,6 +359,7 @@ add_action( 'admin_post_wos_lead_update', function () {
 		'next_step'    => wos_post_text( 'next_step' ),
 		'next_date'    => preg_match( '/^\d{4}-\d{2}-\d{2}$/', wos_post_text( 'next_date' ) ) ? wos_post_text( 'next_date' ) : null,
 		'notes'        => wos_post_text( 'notes', true ),
+		'contacts'     => wos_lead_contacts_from_post(),
 	);
 	if ( '' === $fields['name'] ) {
 		unset( $fields['name'] );
@@ -606,7 +632,9 @@ add_action( 'admin_post_wos_lead_won', function () {
 			'phone'        => $lead->phone,
 			'status'       => 'active',
 			'source'       => substr( $lead->source, 0, 60 ),
-			'notes'        => 'From WOS lead #' . $lead->id . '.',
+			'notes'        => 'From WOS lead #' . $lead->id . '.' . implode( '', array_map( function ( $c ) {
+				return "\n" . $c['name'] . ' (' . $c['role'] . ')' . ( $c['email'] ? ' ' . $c['email'] : '' ) . ( $c['phone'] ? ' ' . $c['phone'] : '' );
+			}, $lead->contacts ) ),
 			'created_at'   => wos_now(),
 			'updated_at'   => wos_now(),
 		) );
