@@ -9,14 +9,9 @@ function wos_settings_fields() {
 		'email'           => array( 'Email on invoices', 'text' ),
 		'website'         => array( 'Website', 'text' ),
 		'invoice_prefix'  => array( 'Invoice prefix', 'text' ),
-		'payment_terms'   => array( 'Payment terms (days)', 'number' ),
 		'payment_details' => array( 'Payment instructions', 'textarea' ),
 		'gst_registered'  => array( 'GST registered', 'checkbox' ),
 		'gst_number'      => array( 'GST/HST number', 'text' ),
-		'gst_rate'        => array( 'GST rate %', 'number' ),
-		'fx_usd'          => array( 'CAD per 1 USD', 'number' ),
-		'fx_eur'          => array( 'CAD per 1 EUR', 'number' ),
-		'leo_rate'        => array( "Leo's cost rate (CAD/hour)", 'number' ),
 		'alert_email'     => array( 'Email for urgent alerts', 'text' ),
 	);
 }
@@ -28,6 +23,7 @@ function wos_render_settings() {
 	<div class="wrap wos">
 		<h1>WIZAD OS settings</h1>
 		<?php wos_render_flash(); ?>
+		<p>Rates, tax and warning levels are set in the app: <a href="<?php echo esc_url( wos_app_url( 'settings' ) ); ?>">Settings</a>.</p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="wos_settings_save">
 			<?php wp_nonce_field( 'wos_settings_save' ); ?>

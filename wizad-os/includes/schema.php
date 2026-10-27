@@ -150,6 +150,28 @@ function wos_install_schema() {
 		KEY type (type)
 	) $c;";
 
+	$sql[] = 'CREATE TABLE ' . wos_table( 'decisions' ) . " (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		area varchar(120) NOT NULL DEFAULT '',
+		question varchar(255) NOT NULL DEFAULT '',
+		context text NULL,
+		options longtext NULL,
+		recommended tinyint(3) NOT NULL DEFAULT -1,
+		due_date date NULL,
+		link varchar(255) NOT NULL DEFAULT '',
+		status varchar(20) NOT NULL DEFAULT 'waiting',
+		aside_until date NULL,
+		answer text NULL,
+		answer_option tinyint(3) NOT NULL DEFAULT -1,
+		added_by varchar(60) NOT NULL DEFAULT '',
+		decided_by varchar(60) NOT NULL DEFAULT '',
+		decided_at datetime NULL,
+		created_at datetime NULL,
+		updated_at datetime NULL,
+		PRIMARY KEY  (id),
+		KEY status (status)
+	) $c;";
+
 	foreach ( $sql as $q ) {
 		dbDelta( $q );
 	}
