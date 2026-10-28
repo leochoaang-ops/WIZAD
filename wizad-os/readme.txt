@@ -1,7 +1,13 @@
 === WIZAD OS ===
-Version: 0.4.0 (WOS Sprint 0: the UI standard)
+Version: 0.5.0 (Update WOS with one button)
 
 WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
+
+0.5.0 (Oct 28, 2026)
+- Update WOS from Settings with one button: no more zip files. WOS fetches the new version from GitHub and WordPress swaps the files with a backup.
+- Staging gets test versions first; the live site only gets versions Leo approved (merged to main).
+- Each update is recorded: from, to, who and when.
+- Includes everything in 0.4.0.
 
 0.4.0 (Oct 27, 2026)
 - Lead file: a Path to Won header replaces the tabs. Steps grouped Discover / Agree / Close, each box reads "date · status", % to Won, WON in the logo magenta, a Next line.

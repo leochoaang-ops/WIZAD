@@ -533,8 +533,53 @@ function wos_app_settings() {
 	</div>
 	</form>
 	<?php
+	wos_app_settings_update();
 	wos_app_settings_claude();
 	wos_app_settings_demo();
+}
+
+function wos_app_settings_update() {
+	if ( ! wos_update_can() ) {
+		return;
+	}
+	$c   = wos_update_check();
+	$new = wos_update_available( $c );
+	$log = get_option( 'wos_update_log', array() );
+	?>
+	<section class="wos-card wos-pad" id="update">
+		<div class="wos-card-head"><h2>Update WOS</h2><?php echo $new ? wos_app_lead_pill( 'New version ' . $c['version'], 'pink' ) : wos_app_lead_pill( 'Up to date', 'green' ); // phpcs:ignore -- escaped inside. ?></div>
+		<p class="wos-muted wos-small"><?php echo esc_html( wos_demo_allowed() ? 'Staging gets test versions first, so they can be tried before the live site.' : 'The live site only gets versions Leo approved.' ); ?> No zip files: WOS fetches the new version from GitHub, and WordPress keeps a backup while it swaps the files.</p>
+		<table class="wos-kv-table">
+			<tr><td class="is-l">Running</td><td class="wos-mono"><?php echo esc_html( WOS_VERSION ); ?></td></tr>
+			<tr><td class="is-l">Available</td><td class="wos-mono"><?php echo esc_html( $c['version'] ? $c['version'] : '–' ); ?></td></tr>
+			<tr><td class="is-l">Follows</td><td class="wos-mono"><?php echo esc_html( $c['branch'] ); ?></td></tr>
+			<tr><td class="is-l">Checked</td><td><?php echo esc_html( substr( $c['checked_at'], 0, 16 ) ); ?></td></tr>
+		</table>
+		<?php if ( $c['error'] ) : ?><div class="wos-flash is-warning wos-mt"><?php echo esc_html( $c['error'] ); ?></div><?php endif; ?>
+		<?php if ( $new && $c['notes'] ) : ?>
+			<div class="wos-label wos-mt">What is new in <?php echo esc_html( $c['version'] ); ?></div>
+			<ul class="wos-list"><?php foreach ( $c['notes'] as $n ) : ?><li><?php echo esc_html( $n ); ?></li><?php endforeach; ?></ul>
+		<?php endif; ?>
+		<div class="wos-actions wos-mt">
+			<?php if ( $new ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('Update WOS to <?php echo esc_attr( $c['version'] ); ?> now? It takes about a minute.');">
+					<input type="hidden" name="action" value="wos_update"><input type="hidden" name="do" value="install"><?php wp_nonce_field( 'wos_update' ); ?>
+					<button class="wos-btn" type="submit">Update to <?php echo esc_html( $c['version'] ); ?></button>
+				</form>
+			<?php endif; ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="wos_update"><input type="hidden" name="do" value="check"><?php wp_nonce_field( 'wos_update' ); ?>
+				<button class="wos-btn is-ghost" type="submit">Check again</button>
+			</form>
+		</div>
+		<?php if ( is_array( $log ) && $log ) : ?>
+			<div class="wos-label wos-mt">Past updates</div>
+			<?php foreach ( array_slice( $log, 0, 5 ) as $u ) : ?>
+				<div class="wos-line"><span><?php echo esc_html( $u['from'] . ' → ' . $u['to'] ); ?> <?php echo wos_app_lead_pill( $u['ok'] ? 'Done' : 'Failed', $u['ok'] ? 'green' : 'red' ); // phpcs:ignore -- escaped inside. ?></span><span class="wos-muted wos-small"><?php echo esc_html( $u['by'] . ' · ' . substr( $u['at'], 0, 16 ) ); ?></span></div>
+			<?php endforeach; ?>
+		<?php endif; ?>
+	</section>
+	<?php
 }
 
 function wos_app_settings_claude() {
