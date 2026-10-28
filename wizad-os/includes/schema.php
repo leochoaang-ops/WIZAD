@@ -202,6 +202,7 @@ function wos_install_schema() {
 		intake longtext NULL,
 		summary longtext NULL,
 		token varchar(40) NOT NULL DEFAULT '',
+		ref varchar(64) NOT NULL DEFAULT '',
 		client_id bigint(20) unsigned NOT NULL DEFAULT 0,
 		log longtext NULL,
 		notes text NULL,
@@ -209,8 +210,34 @@ function wos_install_schema() {
 		updated_at datetime NULL,
 		PRIMARY KEY  (id),
 		KEY stage (stage),
-		KEY token (token)
-	) $c;";
+		KEY token (token),
+		KEY ref (ref)
+		) $c;";
+
+		$sql[] = 'CREATE TABLE ' . wos_table( 'surveys' ) . " (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		sid varchar(40) NOT NULL DEFAULT '',
+		lead_ref varchar(64) NOT NULL DEFAULT '',
+		form_version varchar(10) NOT NULL DEFAULT '',
+		stage tinyint(3) unsigned NOT NULL DEFAULT 0,
+		name varchar(190) NOT NULL DEFAULT '',
+		business varchar(190) NOT NULL DEFAULT '',
+		email varchar(190) NOT NULL DEFAULT '',
+		consent_at datetime NULL,
+		utm_source varchar(120) NOT NULL DEFAULT '',
+		utm_medium varchar(120) NOT NULL DEFAULT '',
+		utm_campaign varchar(120) NOT NULL DEFAULT '',
+		answers longtext NULL,
+		computed longtext NULL,
+		started_at datetime NULL,
+		completed_at datetime NULL,
+		lead_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_at datetime NULL,
+		updated_at datetime NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY sid (sid),
+		KEY lead_ref (lead_ref)
+		) $c;";
 
 	$sql[] = 'CREATE TABLE ' . wos_table( 'chats' ) . " (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

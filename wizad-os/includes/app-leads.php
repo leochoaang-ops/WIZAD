@@ -24,6 +24,7 @@ function wos_app_leads() {
 	$tabs = array(
 		'pipeline'    => 'Pipeline',
 		'assessments' => 'Assessments',
+		'survey'      => 'Survey',
 		'new'         => '+ New assessment',
 	);
 	if ( ! isset( $tabs[ $tab ] ) ) {
@@ -53,6 +54,8 @@ function wos_app_leads() {
 		wos_app_lead_new();
 	} elseif ( 'assessments' === $tab ) {
 		wos_app_lead_assessments( $leads );
+	} elseif ( 'survey' === $tab ) {
+		wos_app_lead_survey();
 	} else {
 		wos_app_lead_pipeline( $leads );
 	}
@@ -146,6 +149,61 @@ function wos_app_lead_assessments( $leads ) {
 			</div>
 		<?php endif; ?>
 	</section>
+	<?php
+}
+
+/** Answers from the Connected Tools Check, finished or not: where people stop, and the lead each one became. */
+function wos_app_lead_survey() {
+	$rows  = wos_surveys_all();
+	$done  = count( array_filter( $rows, function ( $r ) { return (bool) $r->completed_at; } ) );
+	$steps = array( 'Opened', 'Business', 'Challenge', 'Readiness', 'Contact' );
+	?>
+	<section class="wos-card wos-pad">
+		<div class="wos-card-head"><h2>Survey answers</h2><span class="wos-muted wos-small"><?php echo esc_html( count( $rows ) . ' started · ' . $done . ' finished' ); ?></span></div>
+		<p class="wos-muted wos-small">From the Connected Tools Check on wizad.ca. Each step is saved, so you can see where people stop. A finished survey becomes a lead with its scores.</p>
+		<?php if ( ! $rows ) : ?>
+			<p class="wos-muted">None yet.</p>
+		<?php else : ?>
+			<div class="wos-table-wrap">
+				<table class="wos-table">
+					<thead><tr><th>Person</th><th>Started</th><th>Got to</th><th>Source</th><th class="num">Score</th><th>Lead</th><th></th></tr></thead>
+					<tbody>
+						<?php foreach ( $rows as $r ) : ?>
+							<?php $c = (array) json_decode( (string) $r->computed, true ); ?>
+							<tr<?php echo $r->lead_id ? ' data-href="' . esc_url( wos_app_url( 'leads/' . (int) $r->lead_id ) ) . '"' : ''; ?>>
+								<td class="is-who"><a><?php echo esc_html( $r->business ? $r->business : ( $r->name ? $r->name : 'Not given yet' ) ); ?></a><span><?php echo esc_html( trim( $r->name . ( $r->lead_ref ? ' · ref ' . $r->lead_ref : '' ), ' ·' ) ); ?></span></td>
+								<td><?php echo esc_html( wos_app_short_date( $r->started_at ) ); ?></td>
+								<td><?php echo $r->completed_at ? wos_app_lead_pill( 'Finished ' . wos_app_short_date( $r->completed_at ), 'green' ) : wos_app_lead_pill( 'Stopped at ' . ( isset( $steps[ (int) $r->stage ] ) ? $steps[ (int) $r->stage ] : 'step ' . (int) $r->stage ), 'amber' ); // phpcs:ignore -- escaped inside. ?></td>
+								<td><?php echo esc_html( $r->utm_source ? $r->utm_source . ( $r->utm_campaign ? ' · ' . $r->utm_campaign : '' ) : 'Direct' ); ?></td>
+								<td class="num"><?php echo isset( $c['total'] ) ? (int) $c['total'] . '/100' : '–'; ?></td>
+								<td><?php echo $r->lead_id ? wos_app_level_pill( isset( $c['level'] ) ? $c['level'] : '' ) : '<span class="wos-empty">Not yet</span>'; // phpcs:ignore -- escaped inside. ?></td>
+								<td class="is-act">
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('Delete these survey answers? Use this for a privacy request.');">
+										<input type="hidden" name="action" value="wos_survey"><input type="hidden" name="do" value="delete"><input type="hidden" name="id" value="<?php echo (int) $r->id; ?>"><?php wp_nonce_field( 'wos_survey' ); ?>
+										<button class="wos-btn is-text is-small" type="submit">Delete</button>
+									</form>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		<?php endif; ?>
+	</section>
+	<?php if ( current_user_can( 'manage_options' ) ) : ?>
+		<section class="wos-card wos-pad">
+			<h2>Connection for the form</h2>
+			<table class="wos-kv-table">
+				<tr><td class="is-l">Endpoint (POST JSON)</td><td class="wos-mono wos-small"><?php echo esc_html( rest_url( 'wos/v1/survey' ) ); ?></td></tr>
+				<tr><td class="is-l">Sign-in</td><td>None. The form runs in the visitor's browser, so it cannot hold a secret. Protection: allowed sites only, <?php echo (int) WOS_SURVEY_PER_HOUR; ?> posts per hour per visitor, a hidden honeypot field, and strict answer lists.</td></tr>
+			</table>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form wos-mt">
+				<input type="hidden" name="action" value="wos_survey"><input type="hidden" name="do" value="origins"><?php wp_nonce_field( 'wos_survey' ); ?>
+				<label class="wos-field"><span>Sites allowed to post, one per line (* means any; staging only)</span><textarea name="origins" rows="3"><?php echo esc_textarea( implode( "\n", wos_survey_origins() ) ); ?></textarea></label>
+				<div class="wos-actions"><button class="wos-btn is-ghost" type="submit">Save</button></div>
+			</form>
+		</section>
+	<?php endif; ?>
 	<?php
 }
 

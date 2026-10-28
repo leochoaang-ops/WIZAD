@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WIZAD OS
  * Description: WIZAD's internal operating system (WOS), at /app: decisions, clients, sprints, time, content and money. Built for a private install such as os.wizad.ca.
- * Version: 0.5.0
+ * Version: 0.5.1
  * Requires at least: 6.4
  * Requires PHP: 7.4
  * Author: WIZAD
@@ -12,8 +12,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WOS_VERSION', '0.5.0' );
-define( 'WOS_DB_VERSION', '4' );
+define( 'WOS_VERSION', '0.5.1' );
+define( 'WOS_DB_VERSION', '5' );
 define( 'WOS_FILE', __FILE__ );
 define( 'WOS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WOS_URL', plugin_dir_url( __FILE__ ) );
@@ -37,6 +37,7 @@ require_once WOS_DIR . 'includes/leads.php';
 require_once WOS_DIR . 'includes/chat.php';
 require_once WOS_DIR . 'includes/demo.php';
 require_once WOS_DIR . 'includes/update.php';
+require_once WOS_DIR . 'includes/survey.php';
 require_once WOS_DIR . 'includes/app-leads.php';
 require_once WOS_DIR . 'includes/app.php';
 

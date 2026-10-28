@@ -1,7 +1,12 @@
 === WIZAD OS ===
-Version: 0.5.0 (Update WOS with one button)
+Version: 0.5.1 (Survey answers into WOS)
 
 WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
+
+0.5.1 (Oct 28, 2026)
+- The Connected Tools Check on wizad.ca posts its answers to WOS: each step is saved, so Find clients > Survey shows where people stop.
+- A finished survey becomes a lead (or updates the prospect with the same ref or email), with its scores, level, answers and log.
+- No sign-in for the form: allowed sites only, a rate limit, a honeypot field and strict answer lists. Answers can be deleted for a privacy request.
 
 0.5.0 (Oct 28, 2026)
 - Update WOS from Settings with one button: no more zip files. WOS fetches the new version from GitHub and WordPress swaps the files with a backup.
