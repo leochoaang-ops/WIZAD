@@ -7,6 +7,7 @@ WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
 - The survey opens only with an invite code (WZ-7K2P style, no lookalike letters). Find clients > Survey > Invite codes adds prospects and gives each a code.
 - Download for Google Sheets: every survey answer in words, one row per person, as a CSV that opens in Google Sheets or Excel. Codes download too, for a mail merge.
 - Survey answers stay in WOS only; the download is a copy.
+- The survey takes all local business types (16 fields), the field in their own words when it is Other, and an "anything else" note.
 
 0.5.1 (Oct 28, 2026)
 - The Connected Tools Check on wizad.ca posts its answers to WOS: each step is saved, so Find clients > Survey shows where people stop.

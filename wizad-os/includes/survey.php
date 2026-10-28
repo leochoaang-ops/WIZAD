@@ -15,13 +15,14 @@ define( 'WOS_SURVEY_ROUTE', '/wos/v1/survey' );
 define( 'WOS_SURVEY_MAX_BYTES', 20000 );
 define( 'WOS_SURVEY_PER_HOUR', 60 );
 
-/** Allowed answers per question. A list = one of; 'num' = a number or "ns"; 'text' = short text; 'tags' = a list of short texts. */
+/** Allowed answers per question. A list = one of; 'num' = a number or "ns"; 'text:N' = text up to N characters; 'tags' = a list of short texts. */
 function wos_survey_fields() {
 	return array(
-		'seg'    => array( 'trades', 'notary', 'law', 'realty', 'dental', 'other' ),
+		'seg'    => array( 'trades', 'notary', 'law', 'realty', 'dental', 'health', 'money', 'prof', 'food', 'retail', 'personal', 'tourism', 'home', 'auto', 'care', 'other' ),
+		'seg_text' => 'text:120',
 		'P3'     => array( '1-2', '3-5', '6-20', '20+' ),
 		'C1'     => array( 'missed', 'quotes', 'schedule', 'retype', 'chase', 'recall', 'other' ),
-		'C1_text' => 'text',
+		'C1_text' => 'text:160',
 		'C2'     => array( '3', '7.5', '15', '30', '45' ),
 		'C3'     => 'num',
 		'T'      => 'num',
@@ -29,13 +30,14 @@ function wos_survey_fields() {
 		'R2'     => array( 'month', '3m', 'year', 'looking' ),
 		'R3'     => array( 'yes', 'maybe', 'no' ),
 		'P2'     => array( '1000', '3000', '6000', '99999', 'discuss' ),
+		'note'   => 'text:600',
 	);
 }
 
 /** What each answer means, for the lead file. */
 function wos_survey_labels() {
 	return array(
-		'seg' => array( 'Field', array( 'trades' => 'Trades', 'notary' => 'Notary', 'law' => 'Law', 'realty' => 'Real estate', 'dental' => 'Dental', 'other' => 'Other' ) ),
+		'seg' => array( 'Field', array( 'trades' => 'Trades', 'notary' => 'Notary', 'law' => 'Law', 'realty' => 'Real estate', 'dental' => 'Dental', 'health' => 'Health and wellness clinic', 'money' => 'Accounting, bookkeeping or insurance', 'prof' => 'Other professional services', 'food' => 'Food', 'retail' => 'Retail', 'personal' => 'Personal services', 'tourism' => 'Accommodation and tours', 'home' => 'Home and property services', 'auto' => 'Auto', 'care' => 'Childcare and education', 'other' => 'Other' ) ),
 		'P3'  => array( 'Team size', array() ),
 		'C1'  => array( 'Main challenge', array( 'missed' => 'Missed enquiries', 'quotes' => 'Slow quotes', 'schedule' => 'Scheduling', 'retype' => 'Retyping data', 'chase' => 'Chasing payments', 'recall' => 'Recalls and follow-ups', 'other' => 'Other' ) ),
 		'C2'  => array( 'Repeat admin hours / week', array() ),
@@ -45,6 +47,7 @@ function wos_survey_labels() {
 		'R2'  => array( 'Wants to start', array( 'month' => 'This month', '3m' => 'Within 3 months', 'year' => 'This year', 'looking' => 'Just looking' ) ),
 		'R3'  => array( 'Can give an hour a week', array() ),
 		'P2'  => array( 'Budget', array( '1000' => 'About $1,000', '3000' => 'About $3,000', '6000' => 'About $6,000', '99999' => 'More than $6,000', 'discuss' => 'To discuss' ) ),
+		'note' => array( 'Anything else', array() ),
 	);
 }
 
@@ -168,7 +171,7 @@ function wos_survey_save( $d ) {
 				return is_scalar( $x ) ? mb_substr( sanitize_text_field( (string) $x ), 0, 60 ) : '';
 			}, $v ) ) ), 0, 20 ) : array();
 		} else {
-			$v = is_scalar( $v ) ? mb_substr( sanitize_textarea_field( (string) $v ), 0, 500 ) : '';
+			$v = is_scalar( $v ) ? mb_substr( sanitize_textarea_field( (string) $v ), 0, (int) substr( $rule, 5 ) ) : '';
 		}
 		$answers[ $k ] = $v;
 	}
@@ -297,6 +300,9 @@ function wos_survey_to_lead( $survey_id ) {
 		$v = is_array( $v ) ? implode( ', ', $v ) : ( isset( $l[1][ $v ] ) ? $l[1][ $v ] : ( 'ns' === $v ? 'Not sure' : $v ) );
 		if ( 'C1' === $k && ! empty( $a['C1_text'] ) ) {
 			$v .= ' (' . $a['C1_text'] . ')';
+		}
+		if ( 'seg' === $k && ! empty( $a['seg_text'] ) ) {
+			$v .= ' (' . $a['seg_text'] . ')';
 		}
 		$lines[] = $l[0] . ': ' . $v;
 	}
@@ -429,6 +435,9 @@ function wos_survey_csv_rows() {
 			$v = isset( $a[ $k ] ) ? $a[ $k ] : '';
 			$v = is_array( $v ) ? implode( ', ', $v ) : ( isset( $l[1][ $v ] ) ? $l[1][ $v ] : ( 'ns' === $v ? 'Not sure' : $v ) );
 			$row[ $l[0] ] = $v;
+			if ( 'seg' === $k ) {
+				$row['Field in their words'] = isset( $a['seg_text'] ) ? $a['seg_text'] : '';
+			}
 			if ( 'C1' === $k ) {
 				$row['Challenge in their words'] = isset( $a['C1_text'] ) ? $a['C1_text'] : '';
 			}
