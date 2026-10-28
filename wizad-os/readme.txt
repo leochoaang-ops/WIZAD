@@ -8,6 +8,9 @@ WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
 - Download for Google Sheets: every survey answer in words, one row per person, as a CSV that opens in Google Sheets or Excel. Codes download too, for a mail merge.
 - Survey answers stay in WOS only; the download is a copy.
 - The survey takes all local business types (16 fields), the field in their own words when it is Other, and an "anything else" note.
+- Form v6 (research design v3): area, challenges in the past 30 days (several), the one that cost most, tool fit, real use, what gets in the way, software spend. Invited codes can carry field and area, so the form skips those questions.
+- The download is coded for analysis: answer codes, Not sure as an empty cell with a flag, one 0/1 column per option.
+- Record the discovery call date on each finished survey (the real-demand measure).
 
 0.5.1 (Oct 28, 2026)
 - The Connected Tools Check on wizad.ca posts its answers to WOS: each step is saved, so Find clients > Survey shows where people stop.

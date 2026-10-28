@@ -370,3 +370,6 @@ body.wos-client { background: var(--bg); }
 .wos-client-main { max-width: 680px; }
 .wos-summary-doc p { margin: 0; }
 @media (max-width: 560px) { .wos-cf { padding: 20px 16px; } .wos-cf-num { grid-template-columns: 1fr 100px; } .wos-cf-num em { grid-column: 2; margin-top: -6px; } .wos-cf-num input { width: 100px; } }
+
+/* Date picked straight in a table row (survey: discovery call booked). */
+.wos-inline-date input[type="date"] { font: inherit; font-size: 14px; padding: 4px 6px; border: 1px solid #D9DCE1; border-radius: 6px; background: #fff; color: inherit; }
