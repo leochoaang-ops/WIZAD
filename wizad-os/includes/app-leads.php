@@ -161,6 +161,7 @@ function wos_app_lead_survey() {
 	<section class="wos-card wos-pad">
 		<div class="wos-card-head"><h2>Survey answers</h2><span class="wos-muted wos-small"><?php echo esc_html( count( $rows ) . ' started · ' . $done . ' finished' ); ?></span></div>
 		<p class="wos-muted wos-small">From the Connected Tools Check on wizad.ca. Each step is saved, so you can see where people stop. A finished survey becomes a lead with its scores.</p>
+		<div class="wos-actions"><a class="wos-btn is-ghost is-small" href="<?php echo esc_url( wos_survey_csv_url( 'answers' ) ); ?>">Download for Google Sheets</a></div>
 		<?php if ( ! $rows ) : ?>
 			<p class="wos-muted">None yet.</p>
 		<?php else : ?>
@@ -190,12 +191,49 @@ function wos_app_lead_survey() {
 			</div>
 		<?php endif; ?>
 	</section>
+	<?php
+	$codes = wos_survey_codes();
+	$tone  = array( 'Not opened' => 'grey', 'Finished' => 'green' );
+	?>
+	<section class="wos-card wos-pad" id="codes">
+		<div class="wos-card-head"><h2>Invite codes</h2><span class="wos-muted wos-small"><?php echo esc_html( count( $codes ) . ' given' ); ?></span></div>
+		<p class="wos-muted wos-small">The survey opens only with a code from this list, so only owners we invited can answer. Each code belongs to one prospect.</p>
+		<?php if ( $codes ) : ?>
+			<div class="wos-table-wrap">
+				<table class="wos-table">
+					<thead><tr><th>Code</th><th>Business</th><th>Survey</th><th>Given</th><th></th></tr></thead>
+					<tbody>
+						<?php foreach ( $codes as $l ) : ?>
+							<?php $st = wos_survey_code_status( $l ); ?>
+							<tr data-href="<?php echo esc_url( wos_app_url( 'leads/' . (int) $l->id ) ); ?>">
+								<td class="wos-mono"><?php echo esc_html( $l->ref ); ?></td>
+								<td class="is-who"><a href="<?php echo esc_url( wos_app_url( 'leads/' . (int) $l->id ) ); ?>"><?php echo esc_html( $l->name ); ?></a><span><?php echo esc_html( $l->contact_name ); ?></span></td>
+								<td><?php echo wos_app_lead_pill( $st, isset( $tone[ $st ] ) ? $tone[ $st ] : 'amber' ); // phpcs:ignore -- escaped inside. ?></td>
+								<td><?php echo esc_html( wos_app_short_date( $l->created_at ) ); ?></td>
+								<td class="is-act">Open ›</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+			<div class="wos-actions"><a class="wos-btn is-ghost is-small" href="<?php echo esc_url( wos_survey_csv_url( 'codes' ) ); ?>">Download codes for mail merge</a></div>
+		<?php endif; ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form wos-mt">
+			<input type="hidden" name="action" value="wos_survey"><input type="hidden" name="do" value="invite"><?php wp_nonce_field( 'wos_survey' ); ?>
+			<label class="wos-field"><span>Add prospects, one per line: Business, Contact name, Email</span><textarea name="list" rows="4" placeholder="Moss Plumbing, Dan Moss, dan@mossplumbing.ca"></textarea></label>
+			<div class="wos-actions"><button class="wos-btn" type="submit">Add and give codes</button></div>
+		</form>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-mt">
+			<input type="hidden" name="action" value="wos_survey"><input type="hidden" name="do" value="give"><?php wp_nonce_field( 'wos_survey' ); ?>
+			<button class="wos-btn is-text is-small" type="submit">Give a code to every prospect and lead without one</button>
+		</form>
+	</section>
 	<?php if ( current_user_can( 'manage_options' ) ) : ?>
 		<section class="wos-card wos-pad">
 			<h2>Connection for the form</h2>
 			<table class="wos-kv-table">
 				<tr><td class="is-l">Endpoint (POST JSON)</td><td class="wos-mono wos-small"><?php echo esc_html( rest_url( 'wos/v1/survey' ) ); ?></td></tr>
-				<tr><td class="is-l">Sign-in</td><td>None. The form runs in the visitor's browser, so it cannot hold a secret. Protection: allowed sites only, <?php echo (int) WOS_SURVEY_PER_HOUR; ?> posts per hour per visitor, a hidden honeypot field, and strict answer lists.</td></tr>
+				<tr><td class="is-l">Sign-in</td><td>None. The form runs in the visitor's browser, so it cannot hold a secret. Protection: an invite code on the first post, allowed sites only, <?php echo (int) WOS_SURVEY_PER_HOUR; ?> posts per hour per visitor, a hidden honeypot field, and strict answer lists.</td></tr>
 			</table>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form wos-mt">
 				<input type="hidden" name="action" value="wos_survey"><input type="hidden" name="do" value="origins"><?php wp_nonce_field( 'wos_survey' ); ?>

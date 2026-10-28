@@ -195,7 +195,7 @@ function wos_survey_save( $d ) {
 		$computed['package'] = $cin['package'];
 	}
 
-	$ref = $str( 'lead_ref', 64 );
+	$ref = wos_survey_normal_ref( $str( 'lead_ref', 64 ) );
 	if ( '' !== $ref && ! preg_match( '/^[A-Za-z0-9_-]{1,64}$/', $ref ) ) {
 		return wos_survey_error( 'wos_ref', 'lead_ref may only hold letters, digits, - and _.', 400 );
 	}
@@ -224,6 +224,14 @@ function wos_survey_save( $d ) {
 	$old = $sid ? $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE sid = %s", $sid ) ) : null; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	if ( $sid && ! $old ) {
 		return wos_survey_error( 'wos_sid', 'Unknown sid. Start again without one.', 404 );
+	}
+	// Only invited owners: the first post must carry a code WOS gave out (the lead_ref).
+	$invited = $old ? null : wos_survey_invite( $ref );
+	if ( ! $old && ! $invited ) {
+		return wos_survey_error( 'wos_ref', 'We could not find that code (lead_ref).', 400 );
+	}
+	if ( $old ) {
+		$row['lead_ref'] = $old->lead_ref;
 	}
 	if ( $old && $old->completed_at ) {
 		return array( 'ok' => true, 'sid' => $old->sid, 'stored' => 'already complete' );
@@ -256,6 +264,9 @@ function wos_survey_save( $d ) {
 		$id = (int) $wpdb->insert_id;
 	}
 	$out = array( 'ok' => true, 'sid' => $sid, 'stored' => $row['completed_at'] ? 'complete' : 'step ' . $row['stage'] );
+	if ( $invited ) {
+		$out['business'] = $invited->name;
+	}
 	if ( $row['completed_at'] ) {
 		$lead_id = wos_survey_to_lead( $id );
 		$out['stored'] = $lead_id ? 'complete' : 'complete (lead not created)';
@@ -343,6 +354,126 @@ function wos_survey_to_lead( $survey_id ) {
 	return $id;
 }
 
+/** Invite codes look like WZ-7K2P: no 0/O or 1/I/L to misread. */
+function wos_survey_new_code() {
+	global $wpdb;
+	$abc = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+	for ( $len = 4; $len <= 6; $len++ ) {
+		for ( $try = 0; $try < 30; $try++ ) {
+			$code = 'WZ-';
+			for ( $i = 0; $i < $len; $i++ ) {
+				$code .= $abc[ random_int( 0, strlen( $abc ) - 1 ) ];
+			}
+			if ( ! $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . wos_table( 'leads' ) . ' WHERE ref = %s', $code ) ) ) {
+				return $code;
+			}
+		}
+	}
+	return '';
+}
+
+/** People type codes by hand: accept wz7k2p, WZ 7K2P and wz-7k2p. */
+function wos_survey_normal_ref( $ref ) {
+	$ref = trim( (string) $ref );
+	if ( preg_match( '/^wz[\s_-]*([a-z0-9]{4,6})$/i', $ref, $m ) ) {
+		return 'WZ-' . strtoupper( $m[1] );
+	}
+	return $ref;
+}
+
+/** The lead a code was given to, or null. */
+function wos_survey_invite( $ref ) {
+	global $wpdb;
+	if ( '' === (string) $ref ) {
+		return null;
+	}
+	return $wpdb->get_row( $wpdb->prepare( 'SELECT id, name, stage FROM ' . wos_table( 'leads' ) . ' WHERE ref = %s ORDER BY id LIMIT 1', $ref ) );
+}
+
+/** Leads holding a code, with how far their survey got. */
+function wos_survey_codes() {
+	global $wpdb;
+	$leads = $wpdb->get_results( 'SELECT id, name, contact_name, email, stage, ref, created_at FROM ' . wos_table( 'leads' ) . " WHERE ref <> '' ORDER BY id DESC LIMIT 500" );
+	$by    = array();
+	foreach ( $wpdb->get_results( 'SELECT lead_ref, stage, completed_at FROM ' . wos_table( 'surveys' ) . " WHERE lead_ref <> '' ORDER BY id" ) as $s ) {
+		$by[ strtoupper( $s->lead_ref ) ] = $s;
+	}
+	foreach ( $leads as $l ) {
+		$l->survey = isset( $by[ strtoupper( $l->ref ) ] ) ? $by[ strtoupper( $l->ref ) ] : null;
+	}
+	return $leads;
+}
+
+/** One spreadsheet row per survey, in words, for Google Sheets or Excel. */
+function wos_survey_csv_rows() {
+	$labels = wos_survey_labels();
+	$steps  = array( 'Opened', 'Business', 'Challenge', 'Readiness', 'Contact' );
+	$rows   = array();
+	foreach ( array_reverse( wos_surveys_all( 5000 ) ) as $r ) {
+		$a   = (array) json_decode( (string) $r->answers, true );
+		$c   = (array) json_decode( (string) $r->computed, true );
+		$row = array(
+			'Code'      => $r->lead_ref,
+			'Started'   => (string) $r->started_at,
+			'Finished'  => (string) $r->completed_at,
+			'Got to'    => $r->completed_at ? 'Finished' : ( isset( $steps[ (int) $r->stage ] ) ? $steps[ (int) $r->stage ] : 'Step ' . (int) $r->stage ),
+			'Name'      => $r->name,
+			'Business'  => $r->business,
+			'Email'     => $r->email,
+			'Consent'   => (string) $r->consent_at,
+			'Source'    => $r->utm_source,
+			'Medium'    => $r->utm_medium,
+			'Campaign'  => $r->utm_campaign,
+		);
+		foreach ( $labels as $k => $l ) {
+			$v = isset( $a[ $k ] ) ? $a[ $k ] : '';
+			$v = is_array( $v ) ? implode( ', ', $v ) : ( isset( $l[1][ $v ] ) ? $l[1][ $v ] : ( 'ns' === $v ? 'Not sure' : $v ) );
+			$row[ $l[0] ] = $v;
+			if ( 'C1' === $k ) {
+				$row['Challenge in their words'] = isset( $a['C1_text'] ) ? $a['C1_text'] : '';
+			}
+		}
+		$row['Score /100']        = isset( $c['total'] ) ? $c['total'] : '';
+		$row['Level']             = isset( $c['level'] ) ? $c['level'] : '';
+		$row['Package']           = isset( $c['package'] ) ? $c['package'] : '';
+		$row['Benefit low / mo']  = isset( $c['benefit_low'] ) ? $c['benefit_low'] : '';
+		$row['Benefit high / mo'] = isset( $c['benefit_high'] ) ? $c['benefit_high'] : '';
+		$row['Lead in WOS']       = $r->lead_id ? wos_app_url( 'leads/' . (int) $r->lead_id ) : '';
+		$rows[] = $row;
+	}
+	return $rows;
+}
+
+function wos_survey_csv_send( $name, $rows, $head ) {
+	nocache_headers();
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename="wos-' . $name . '-' . wos_today() . '.csv"' );
+	$out = fopen( 'php://output', 'w' );
+	fwrite( $out, "\xEF\xBB\xBF" ); // So Excel reads UTF-8; Google Sheets ignores it.
+	fputcsv( $out, $head );
+	foreach ( $rows as $r ) {
+		// Stop spreadsheet formula injection from typed answers.
+		fputcsv( $out, array_map( function ( $v ) {
+			$v = (string) $v;
+			return preg_match( '/^[=+\-@\t\r]/', $v ) && ! is_numeric( $v ) ? "'" . $v : $v;
+		}, array_values( $r ) ) );
+	}
+	fclose( $out );
+	exit;
+}
+
+function wos_survey_csv_url( $what ) {
+	return wp_nonce_url( add_query_arg( array( 'action' => 'wos_survey', 'do' => 'csv', 'what' => $what ), admin_url( 'admin-post.php' ) ), 'wos_survey' );
+}
+
+function wos_survey_code_status( $l ) {
+	if ( ! $l->survey ) {
+		return 'Not opened';
+	}
+	$steps = array( 'Opened', 'Business', 'Challenge', 'Readiness', 'Contact' );
+	return $l->survey->completed_at ? 'Finished' : 'Stopped at ' . ( isset( $steps[ (int) $l->survey->stage ] ) ? $steps[ (int) $l->survey->stage ] : 'step ' . (int) $l->survey->stage );
+}
+
 function wos_surveys_all( $limit = 200 ) {
 	global $wpdb;
 	return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . wos_table( 'surveys' ) . ' ORDER BY updated_at DESC LIMIT %d', $limit ) );
@@ -353,8 +484,56 @@ add_action( 'admin_post_wos_survey', function () {
 	wos_require_cap();
 	check_admin_referer( 'wos_survey' );
 	global $wpdb;
-	$do = isset( $_POST['do'] ) ? sanitize_key( wp_unslash( $_POST['do'] ) ) : '';
-	if ( 'delete' === $do ) {
+	$do = isset( $_REQUEST['do'] ) ? sanitize_key( wp_unslash( $_REQUEST['do'] ) ) : '';
+	if ( 'csv' === $do ) {
+		if ( 'codes' === ( isset( $_REQUEST['what'] ) ? sanitize_key( wp_unslash( $_REQUEST['what'] ) ) : '' ) ) {
+			$rows = array();
+			foreach ( wos_survey_codes() as $l ) {
+				$rows[] = array( $l->ref, $l->name, $l->contact_name, $l->email, wos_survey_code_status( $l ), wos_app_url( 'leads/' . (int) $l->id ) );
+			}
+			wos_survey_csv_send( 'invite-codes', $rows, array( 'Code', 'Business', 'Contact', 'Email', 'Survey', 'Lead in WOS' ) );
+		}
+		$rows = wos_survey_csv_rows();
+		wos_survey_csv_send( 'survey-answers', $rows, $rows ? array_keys( $rows[0] ) : array( 'No answers yet' ) );
+	}
+	if ( 'invite' === $do ) {
+		// One business per line: Business, Contact name, Email. Each becomes a prospect with a code.
+		$raw  = isset( $_POST['list'] ) ? sanitize_textarea_field( wp_unslash( $_POST['list'] ) ) : '';
+		$made = 0;
+		foreach ( array_slice( preg_split( '/\r\n|\n/', $raw ), 0, 200 ) as $line ) {
+			$p = array_map( 'trim', str_getcsv( $line ) );
+			if ( '' === $p[0] ) {
+				continue;
+			}
+			$code = wos_survey_new_code();
+			if ( ! $code ) {
+				break;
+			}
+			wos_lead_save( 0, array(
+				'name'         => mb_substr( $p[0], 0, 190 ),
+				'contact_name' => isset( $p[1] ) ? mb_substr( $p[1], 0, 190 ) : '',
+				'email'        => isset( $p[2] ) ? sanitize_email( $p[2] ) : '',
+				'source'       => 'Survey invite',
+				'stage'        => 'prospect',
+				'ref'          => $code,
+				'checks'       => array(),
+				'log'          => array( array( 'at' => wos_now(), 'by' => wp_get_current_user()->display_name, 'text' => 'Survey code ' . $code . ' given.', 'kind' => 'link' ) ),
+			) );
+			$made++;
+		}
+		wos_flash( $made ? $made . ' prospect' . ( 1 === $made ? '' : 's' ) . ' added, each with a survey code.' : 'Nothing added. Put one business per line.', $made ? 'success' : 'warning' );
+	} elseif ( 'give' === $do ) {
+		$ids  = $wpdb->get_col( 'SELECT id FROM ' . wos_table( 'leads' ) . " WHERE ref = '' AND stage IN ('prospect','lead') LIMIT 500" );
+		foreach ( $ids as $id ) {
+			$code = wos_survey_new_code();
+			if ( $code ) {
+				$l = wos_lead_get( $id );
+				wos_lead_save( $id, array( 'ref' => $code ) );
+				wos_lead_log( $l, 'Survey code ' . $code . ' given.', null, 'link' );
+			}
+		}
+		wos_flash( count( $ids ) ? count( $ids ) . ' lead' . ( 1 === count( $ids ) ? '' : 's' ) . ' given a survey code.' : 'Every prospect and lead already has a code.' );
+	} elseif ( 'delete' === $do ) {
 		$wpdb->delete( wos_table( 'surveys' ), array( 'id' => isset( $_POST['id'] ) ? (int) $_POST['id'] : 0 ) );
 		wos_flash( 'Survey answers deleted. A lead made from them stays; delete it in its file if needed.' );
 	} elseif ( 'origins' === $do && current_user_can( 'manage_options' ) ) {
@@ -368,6 +547,6 @@ add_action( 'admin_post_wos_survey', function () {
 		update_option( 'wos_survey_origins', implode( "\n", $ok ), false );
 		wos_flash( 'Allowed sites saved.' );
 	}
-	wp_safe_redirect( wos_app_url( 'leads', array( 'tab' => 'survey' ) ) );
+	wp_safe_redirect( wos_app_url( 'leads', array( 'tab' => 'survey' ) ) . ( in_array( $do, array( 'invite', 'give' ), true ) ? '#codes' : '' ) );
 	exit;
 } );
