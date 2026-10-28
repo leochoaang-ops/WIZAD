@@ -11,6 +11,7 @@ WIZAD's internal operating system for a private WordPress install (os.wizad.ca).
 - Form v6 (research design v3): area, challenges in the past 30 days (several), the one that cost most, tool fit, real use, what gets in the way, software spend. Invited codes can carry field and area, so the form skips those questions.
 - The download is coded for analysis: answer codes, Not sure as an empty cell with a flag, one 0/1 column per option.
 - Record the discovery call date on each finished survey (the real-demand measure).
+- The button an owner presses at the end of the report is saved. Requests for a next step, a guide or a referral show under "Asked for in the report" until marked done.
 
 0.5.1 (Oct 28, 2026)
 - The Connected Tools Check on wizad.ca posts its answers to WOS: each step is saved, so Find clients > Survey shows where people stop.

@@ -24,7 +24,7 @@ function wos_app_leads() {
 	$tabs = array(
 		'pipeline'    => 'Pipeline',
 		'assessments' => 'Assessments',
-		'survey'      => 'Survey',
+		'survey'      => 'Survey' . ( ( $owed = count( wos_survey_owed() ) ) ? ' · ' . $owed . ' to answer' : '' ),
 		'new'         => '+ New assessment',
 	);
 	if ( ! isset( $tabs[ $tab ] ) ) {
@@ -156,7 +156,35 @@ function wos_app_lead_assessments( $leads ) {
 function wos_app_lead_survey() {
 	$rows  = wos_surveys_all();
 	$done  = count( array_filter( $rows, function ( $r ) { return (bool) $r->completed_at; } ) );
+	$owed  = wos_survey_owed();
+	$ctas  = wos_survey_ctas();
 	?>
+	<?php if ( $owed ) : ?>
+		<section class="wos-card wos-pad">
+			<div class="wos-card-head"><h2>Asked for in the report</h2><span class="wos-muted wos-small"><?php echo esc_html( count( $owed ) . ' to answer' ); ?></span></div>
+			<p class="wos-muted wos-small">Owners pressed one of these buttons at the end of their report. Each one is a reply we owe.</p>
+			<div class="wos-table-wrap">
+				<table class="wos-table">
+					<thead><tr><th>Person</th><th>Asked for</th><th>When</th><th></th></tr></thead>
+					<tbody>
+						<?php foreach ( $owed as $r ) : ?>
+							<tr<?php echo $r->lead_id ? ' data-href="' . esc_url( wos_app_url( 'leads/' . (int) $r->lead_id ) ) . '"' : ''; ?>>
+								<td class="is-who"><a><?php echo esc_html( $r->business ? $r->business : $r->name ); ?></a><span><?php echo esc_html( $r->name ); ?></span></td>
+								<td><?php echo wos_app_lead_pill( $ctas[ $r->cta ][0], 'amber' ); // phpcs:ignore -- escaped inside. ?></td>
+								<td><?php echo esc_html( wos_app_short_date( $r->cta_at ) ); ?></td>
+								<td class="is-act">
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+										<input type="hidden" name="action" value="wos_survey"><input type="hidden" name="do" value="cta_done"><input type="hidden" name="id" value="<?php echo (int) $r->id; ?>"><?php wp_nonce_field( 'wos_survey' ); ?>
+										<button class="wos-btn is-ghost is-small" type="submit">Done</button>
+									</form>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		</section>
+	<?php endif; ?>
 	<section class="wos-card wos-pad">
 		<div class="wos-card-head"><h2>Survey answers</h2><span class="wos-muted wos-small"><?php echo esc_html( count( $rows ) . ' started · ' . $done . ' finished' ); ?></span></div>
 		<p class="wos-muted wos-small">From the Connected Tools Check on wizad.ca. Each step is saved, so you can see where people stop. A finished survey becomes a lead with its scores.</p>
@@ -185,6 +213,9 @@ function wos_app_lead_survey() {
 										</form>
 									<?php else : ?>
 										<span class="wos-empty">After finishing</span>
+									<?php endif; ?>
+									<?php if ( $r->cta && isset( $ctas[ $r->cta ] ) ) : ?>
+										<span class="wos-muted wos-small">Pressed: <?php echo esc_html( $ctas[ $r->cta ][0] ); ?></span>
 									<?php endif; ?>
 								</td>
 								<td class="is-act">

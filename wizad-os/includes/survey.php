@@ -53,6 +53,23 @@ function wos_survey_barriers() {
 	return array( 'time', 'complex', 'connect', 'staff', 'setup', 'cost', 'fine', 'other' );
 }
 
+/** What the report's buttons ask for: label, and the follow-up we owe (empty when the booking itself is the follow-up). */
+function wos_survey_ctas() {
+	return array(
+		'book'      => array( 'Book a discovery call', '' ),
+		'book_link' => array( 'Booking link', '' ),
+		'next_step' => array( 'Send the next step', 'Send the next step they asked for in the report' ),
+		'guide'     => array( 'Send the guide', 'Send the guide they asked for in the report' ),
+		'referral'  => array( 'Referral', 'Follow up the referral from the report' ),
+	);
+}
+
+/** Report requests we still owe a reply to. */
+function wos_survey_owed() {
+	global $wpdb;
+	return $wpdb->get_results( 'SELECT * FROM ' . wos_table( 'surveys' ) . " WHERE cta IN ('next_step','guide','referral') AND cta_done IS NULL ORDER BY cta_at" );
+}
+
 /** The step a form stopped at, by form version. */
 function wos_survey_step_name( $s ) {
 	$steps = 'v6' === $s->form_version ? array( 'Business', 'Past month', 'Cost', 'Tools', 'Timing', 'Report' ) : array( 'Opened', 'Business', 'Challenge', 'Readiness', 'Contact' );
@@ -291,6 +308,20 @@ function wos_survey_save( $d ) {
 		}
 	}
 	if ( $old && $old->completed_at ) {
+		// After the report: the button they pressed (book a call, ask for a guide...). Only this is taken.
+		$cta = $str( 'cta', 20 );
+		if ( isset( wos_survey_ctas()[ $cta ] ) ) {
+			$at = $date( 'cta_at' ) ? $date( 'cta_at' ) : wos_now();
+			$wpdb->update( $t, array( 'cta' => $cta, 'cta_at' => $at, 'cta_done' => null, 'updated_at' => wos_now() ), array( 'id' => (int) $old->id ) );
+			$l = $old->lead_id ? wos_lead_get( $old->lead_id ) : null;
+			if ( $l ) {
+				wos_lead_log( $l, 'Asked from the report: ' . wos_survey_ctas()[ $cta ][0] . '.', 'Website form', 'client' );
+				if ( wos_survey_ctas()[ $cta ][1] ) {
+					wos_lead_save( $l->id, array( 'next_step' => wos_survey_ctas()[ $cta ][1], 'next_date' => wos_today() ) );
+				}
+			}
+			return array( 'ok' => true, 'sid' => $old->sid, 'stored' => 'cta' );
+		}
 		return array( 'ok' => true, 'sid' => $old->sid, 'stored' => 'already complete' );
 	}
 	if ( $old ) {
@@ -550,6 +581,8 @@ function wos_survey_csv_rows() {
 		foreach ( array( 'problem_any', 'costly', 'gap', 'main_challenge', 'total', 'level', 'package', 'benefit_low', 'benefit_high' ) as $k ) {
 			$row[ $k ] = isset( $c[ $k ] ) ? $c[ $k ] : '';
 		}
+		$row['cta']              = $r->cta;
+		$row['cta_at']           = (string) $r->cta_at;
 		$row['discovery_booked'] = $r->completed_at ? ( $r->booked_date ? 1 : 0 ) : '';
 		$row['booked_date']      = (string) $r->booked_date;
 		$row['lead_in_wos']      = $r->lead_id ? wos_app_url( 'leads/' . (int) $r->lead_id ) : '';
@@ -648,6 +681,14 @@ add_action( 'admin_post_wos_survey', function () {
 			}
 		}
 		wos_flash( count( $ids ) ? count( $ids ) . ' lead' . ( 1 === count( $ids ) ? '' : 's' ) . ' given a survey code.' : 'Every prospect and lead already has a code.' );
+	} elseif ( 'cta_done' === $do ) {
+		$id = isset( $_POST['id'] ) ? (int) $_POST['id'] : 0;
+		$wpdb->update( wos_table( 'surveys' ), array( 'cta_done' => wos_now() ), array( 'id' => $id ) );
+		$s = $wpdb->get_row( $wpdb->prepare( 'SELECT lead_id, cta FROM ' . wos_table( 'surveys' ) . ' WHERE id = %d', $id ) );
+		if ( $s && $s->lead_id && ( $l = wos_lead_get( $s->lead_id ) ) && isset( wos_survey_ctas()[ $s->cta ] ) ) {
+			wos_lead_log( $l, 'Done: ' . wos_survey_ctas()[ $s->cta ][0] . '.', null, 'sent' );
+		}
+		wos_flash( 'Marked done.' );
 	} elseif ( 'booked' === $do ) {
 		// The report ends with "Book a 20-minute discovery call": record when they booked (the real-demand measure).
 		$id   = isset( $_POST['id'] ) ? (int) $_POST['id'] : 0;
