@@ -37,7 +37,7 @@ function wos_survey_fields() {
 		'fit'     => array( 'poor', 'partly', 'mostly', 'fully' ),
 		'usage'   => array( 'little', 'half', 'most', 'ns' ),
 		'barrier' => array( 'many' => wos_survey_barriers(), 'max' => 2, 'only' => 'fine' ),
-		'spend'   => array( 'u100', '100-500', '500-1500', '1500+', 'ns' ),
+		'spend'   => array( 'none', 'u100', '100-500', '500-1500', '1500+', 'ns' ),
 		'R2'      => array( 'month', '3m', 'year', 'looking', 'no' ),
 		'R3'      => array( 'yes', 'maybe', 'no' ),
 		'P2'      => array( '1000', '3000', '6000', '99999', 'discuss' ),
@@ -76,7 +76,7 @@ function wos_survey_labels() {
 		'fit'     => array( 'Tools fit the work', array( 'poor' => 'Poorly', 'partly' => 'Partly', 'mostly' => 'Mostly', 'fully' => 'Fully' ) ),
 		'usage'   => array( 'Software really used', array( 'little' => 'A little', 'half' => 'About half', 'most' => 'Most of it' ) ),
 		'barrier' => array( 'In the way', array( 'time' => 'No time to learn', 'complex' => 'Too complicated', 'connect' => "Tools don't connect", 'staff' => "Staff don't use them", 'setup' => 'Set up wrong', 'cost' => 'Too costly', 'fine' => 'Nothing, they work fine', 'other' => 'Other' ) ),
-		'spend'   => array( 'Software spend / month', array( 'u100' => 'Under $100', '100-500' => '$100 to $500', '500-1500' => '$500 to $1,500', '1500+' => 'More than $1,500' ) ),
+		'spend'   => array( 'Software spend / month', array( 'none' => 'Nothing', 'u100' => 'Under $100', '100-500' => '$100 to $500', '500-1500' => '$500 to $1,500', '1500+' => 'More than $1,500' ) ),
 		'R2'      => array( 'Wants to start', array( 'month' => 'Within a month', '3m' => 'In 1 to 3 months', 'year' => 'Later this year', 'looking' => 'Just exploring', 'no' => 'Not looking now' ) ),
 		'R3'      => array( 'Can give an hour a week', array( 'yes' => 'Yes', 'maybe' => 'Probably', 'no' => 'Not right now' ) ),
 		'P2'      => array( 'Budget', array( '1000' => 'Under $1,500', '3000' => '$1,500 to $3,000', '6000' => '$3,000 to $6,000', '99999' => 'More, if the case is clear', 'discuss' => 'To discuss' ) ),
@@ -282,8 +282,13 @@ function wos_survey_save( $d ) {
 	}
 	if ( $old ) {
 		$row['lead_ref'] = $old->lead_ref;
-	} elseif ( '' === $row['business'] ) {
-		$row['business'] = $invited->name;
+	} else {
+		// Invited: start from what WOS already holds, so the form need not ask again.
+		foreach ( array( 'business' => 'name', 'name' => 'contact_name', 'email' => 'email' ) as $mine => $theirs ) {
+			if ( '' === $row[ $mine ] ) {
+				$row[ $mine ] = $invited->$theirs;
+			}
+		}
 	}
 	if ( $old && $old->completed_at ) {
 		return array( 'ok' => true, 'sid' => $old->sid, 'stored' => 'already complete' );
@@ -318,7 +323,12 @@ function wos_survey_save( $d ) {
 	$out = array( 'ok' => true, 'sid' => $sid, 'stored' => $row['completed_at'] ? 'complete' : 'step ' . $row['stage'] );
 	if ( $invited ) {
 		// What we already know about an invited business, so the form can skip those questions.
-		$out['business'] = $invited->name;
+		// The email goes back masked: whoever holds a code sees whether it is theirs, not the address itself.
+		$out['business']     = $invited->name;
+		$out['contact_name'] = $invited->contact_name;
+		if ( $invited->email ) {
+			$out['email_masked'] = wos_mask_email( $invited->email );
+		}
 		foreach ( array( 'seg', 'loc' ) as $k ) {
 			if ( $invited->$k ) {
 				$out[ $k ] = $invited->$k;
@@ -449,7 +459,7 @@ function wos_survey_invite( $ref ) {
 	if ( '' === (string) $ref ) {
 		return null;
 	}
-	return $wpdb->get_row( $wpdb->prepare( 'SELECT id, name, stage, seg, loc FROM ' . wos_table( 'leads' ) . ' WHERE ref = %s ORDER BY id LIMIT 1', $ref ) );
+	return $wpdb->get_row( $wpdb->prepare( 'SELECT id, name, contact_name, email, stage, seg, loc FROM ' . wos_table( 'leads' ) . ' WHERE ref = %s ORDER BY id LIMIT 1', $ref ) );
 }
 
 /** Leads holding a code, with how far their survey got. */
