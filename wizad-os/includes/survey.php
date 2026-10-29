@@ -14,6 +14,9 @@ defined( 'ABSPATH' ) || exit;
 define( 'WOS_SURVEY_ROUTE', '/wos/v1/survey' );
 define( 'WOS_SURVEY_MAX_BYTES', 20000 );
 define( 'WOS_SURVEY_PER_HOUR', 60 );
+define( 'WOS_SURVEY_OPEN_PER_HOUR', 5 );
+define( 'WOS_SURVEY_OPEN_PER_DAY', 100 );
+define( 'WOS_SURVEY_OPEN_MIN_SECONDS', 60 );
 
 /**
  * Allowed answers per question. A list = one of; array( 'many' => list, 'max' => n, 'only' => code ) = several of,
@@ -292,14 +295,25 @@ function wos_survey_save( $d ) {
 	if ( $sid && ! $old ) {
 		return wos_survey_error( 'wos_sid', 'Unknown sid. Start again without one.', 404 );
 	}
-	// Only invited owners: the first post must carry a code WOS gave out (the lead_ref).
-	$invited = $old ? null : wos_survey_invite( $ref );
-	if ( ! $old && ! $invited ) {
+	// Invited owners bring a code WOS gave out (the lead_ref). The open link (QR, posts) starts
+	// without one, only while Leo has it switched on, and within tighter limits.
+	$open    = ! $old && '' === $ref && 'open' === $row['source'];
+	$invited = $old || $open ? null : wos_survey_invite( $ref );
+	if ( $open ) {
+		$closed = wos_survey_open_check();
+		if ( $closed ) {
+			return $closed;
+		}
+	} elseif ( ! $old && ! $invited ) {
 		return wos_survey_error( 'wos_ref', 'We could not find that code (lead_ref).', 400 );
+	}
+	$is_open = $open || ( $old && '' === $old->lead_ref && 'open' === $old->source );
+	if ( $is_open && $row['completed_at'] && '' === $row['business'] && ( ! $old || '' === $old->business ) ) {
+		return wos_survey_error( 'wos_business', 'A business name is needed to finish.', 400 );
 	}
 	if ( $old ) {
 		$row['lead_ref'] = $old->lead_ref;
-	} else {
+	} elseif ( $invited ) {
 		// Invited: start from what WOS already holds, so the form need not ask again.
 		foreach ( array( 'business' => 'name', 'name' => 'contact_name', 'email' => 'email' ) as $mine => $theirs ) {
 			if ( '' === $row[ $mine ] ) {
@@ -367,8 +381,19 @@ function wos_survey_save( $d ) {
 		}
 	}
 	if ( $row['completed_at'] ) {
+		// A bot fills a form in seconds; a person takes minutes. Too fast: kept, flagged, no lead.
+		$took = $old ? strtotime( wos_now() ) - strtotime( $old->created_at ) : 0;
+		if ( $is_open && $took < WOS_SURVEY_OPEN_MIN_SECONDS ) {
+			$c = (array) json_decode( (string) $wpdb->get_var( $wpdb->prepare( "SELECT computed FROM $t WHERE id = %d", $id ) ), true ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->update( $t, array( 'computed' => wp_json_encode( array_merge( $c, array( 'suspect' => 1 ) ) ) ), array( 'id' => $id ) );
+			$out['stored'] = 'complete';
+			return $out;
+		}
 		$lead_id = wos_survey_to_lead( $id );
 		$out['stored'] = $lead_id ? 'complete' : 'complete (lead not created)';
+		if ( $lead_id && $is_open ) {
+			$out['code'] = (string) $wpdb->get_var( $wpdb->prepare( "SELECT lead_ref FROM $t WHERE id = %d", $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		}
 	}
 	return $out;
 }
@@ -408,7 +433,8 @@ function wos_survey_to_lead( $survey_id ) {
 		$lines[] = 'Estimated benefit: ' . wos_money( $c['benefit_low'] ) . ' to ' . wos_money( $c['benefit_high'] ) . ' a month';
 	}
 	$route  = wos_lead_route( $level );
-	$source = 'Connected Tools Check' . ( $s->utm_source ? ' · ' . $s->utm_source : '' );
+
+	$source = 'Connected Tools Check' . ( 'open' === $s->source ? ' · open link' : '' ) . ( $s->utm_source ? ' · ' . $s->utm_source : '' );
 
 	$lead = null;
 	if ( $s->lead_ref ) {
@@ -416,6 +442,15 @@ function wos_survey_to_lead( $survey_id ) {
 	}
 	if ( ! $lead && $s->email ) {
 		$lead = $wpdb->get_row( $wpdb->prepare( 'SELECT id FROM ' . wos_table( 'leads' ) . " WHERE email = %s AND stage IN ('prospect','lead') ORDER BY id DESC", $s->email ) );
+	}
+	if ( '' === $s->lead_ref && 'open' === $s->source ) {
+		// The open link: the business gets its code now, to come back with (the one it already has, if we know it).
+		$known       = $lead ? (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ref FROM ' . wos_table( 'leads' ) . ' WHERE id = %d', $lead->id ) ) : '';
+		$s->lead_ref = $known ? $known : wos_survey_new_code();
+		$wpdb->update( wos_table( 'surveys' ), array( 'lead_ref' => $s->lead_ref ), array( 'id' => (int) $s->id ) );
+		if ( $lead && ! $known ) {
+			wos_lead_save( $lead->id, array( 'ref' => $s->lead_ref ) );
+		}
 	}
 	$fields = array(
 		'seg'     => isset( $a['seg'] ) ? $a['seg'] : '',
@@ -455,6 +490,21 @@ function wos_survey_to_lead( $survey_id ) {
 	}
 	$wpdb->update( wos_table( 'surveys' ), array( 'lead_id' => $id ), array( 'id' => (int) $s->id ) );
 	return $id;
+}
+
+/** The open link is off until Leo switches it on. Returns a WP_Error when a new open start is not allowed. */
+function wos_survey_open_check() {
+	if ( ! get_option( 'wos_survey_open' ) ) {
+		return wos_survey_error( 'wos_closed', 'The open link is closed. Ask us for a code.', 403 );
+	}
+	$ip  = 'wos_svyo_' . md5( wos_client_ip() . wp_salt( 'nonce' ) );
+	$day = 'wos_svyo_day_' . gmdate( 'Ymd' );
+	if ( (int) get_transient( $ip ) >= WOS_SURVEY_OPEN_PER_HOUR || (int) get_transient( $day ) >= WOS_SURVEY_OPEN_PER_DAY ) {
+		return wos_survey_error( 'wos_rate', 'Too many new starts. Try again later.', 429 );
+	}
+	set_transient( $ip, (int) get_transient( $ip ) + 1, HOUR_IN_SECONDS );
+	set_transient( $day, (int) get_transient( $day ) + 1, DAY_IN_SECONDS );
+	return null;
 }
 
 /** Invite codes look like WZ-7K2P: no 0/O or 1/I/L to misread. */
@@ -578,7 +628,7 @@ function wos_survey_csv_rows() {
 		foreach ( array( 'spend', 'R2', 'R3', 'P2', 'note' ) as $k ) {
 			$row[ $k ] = $cell( $a, $k );
 		}
-		foreach ( array( 'problem_any', 'costly', 'gap', 'main_challenge', 'total', 'level', 'package', 'benefit_low', 'benefit_high' ) as $k ) {
+		foreach ( array( 'problem_any', 'costly', 'gap', 'main_challenge', 'total', 'level', 'package', 'benefit_low', 'benefit_high', 'suspect' ) as $k ) {
 			$row[ $k ] = isset( $c[ $k ] ) ? $c[ $k ] : '';
 		}
 		$row['cta']              = $r->cta;
@@ -713,6 +763,10 @@ add_action( 'admin_post_wos_survey', function () {
 		}
 		update_option( 'wos_survey_origins', implode( "\n", $ok ), false );
 		wos_flash( 'Allowed sites saved.' );
+	} elseif ( 'open' === $do && current_user_can( 'manage_options' ) ) {
+		$on = ! empty( $_POST['on'] );
+		update_option( 'wos_survey_open', $on ? 1 : 0, false );
+		wos_flash( $on ? 'Open link on: anyone with the link can take the survey.' : 'Open link off: only invite codes work.' );
 	}
 	wp_safe_redirect( wos_app_url( 'leads', array( 'tab' => 'survey' ) ) . ( in_array( $do, array( 'invite', 'give' ), true ) ? '#codes' : '' ) );
 	exit;

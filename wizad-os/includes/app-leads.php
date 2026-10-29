@@ -201,7 +201,7 @@ function wos_app_lead_survey() {
 							<tr<?php echo $r->lead_id ? ' data-href="' . esc_url( wos_app_url( 'leads/' . (int) $r->lead_id ) ) . '"' : ''; ?>>
 								<td class="is-who"><a><?php echo esc_html( $r->business ? $r->business : ( $r->name ? $r->name : 'Not given yet' ) ); ?></a><span><?php echo esc_html( trim( $r->name . ( $r->lead_ref ? ' · ref ' . $r->lead_ref : '' ), ' ·' ) ); ?></span></td>
 								<td><?php echo esc_html( wos_app_short_date( $r->started_at ) ); ?></td>
-								<td><?php echo $r->completed_at ? wos_app_lead_pill( 'Finished ' . wos_app_short_date( $r->completed_at ), 'green' ) : wos_app_lead_pill( 'Stopped at ' . wos_survey_step_name( $r ), 'amber' ); // phpcs:ignore -- escaped inside. ?></td>
+								<td><?php echo $r->completed_at ? ( ! empty( $c['suspect'] ) ? wos_app_lead_pill( 'Too fast: flagged', 'red' ) : wos_app_lead_pill( 'Finished ' . wos_app_short_date( $r->completed_at ), 'green' ) ) : wos_app_lead_pill( 'Stopped at ' . wos_survey_step_name( $r ), 'amber' ); // phpcs:ignore -- escaped inside. ?></td>
 								<td><?php echo esc_html( $r->utm_source ? $r->utm_source . ( $r->utm_campaign ? ' · ' . $r->utm_campaign : '' ) : 'Direct' ); ?></td>
 								<td class="num"><?php echo isset( $c['total'] ) ? (int) $c['total'] . '/100' : '–'; ?></td>
 								<td><?php echo $r->lead_id ? wos_app_level_pill( isset( $c['level'] ) ? $c['level'] : '' ) : '<span class="wos-empty">Not yet</span>'; // phpcs:ignore -- escaped inside. ?></td>
@@ -275,6 +275,12 @@ function wos_app_lead_survey() {
 				<tr><td class="is-l">Endpoint (POST JSON)</td><td class="wos-mono wos-small"><?php echo esc_html( rest_url( 'wos/v1/survey' ) ); ?></td></tr>
 				<tr><td class="is-l">Sign-in</td><td>None. The form runs in the visitor's browser, so it cannot hold a secret. Protection: an invite code on the first post, allowed sites only, <?php echo (int) WOS_SURVEY_PER_HOUR; ?> posts per hour per visitor, a hidden honeypot field, and strict answer lists.</td></tr>
 			</table>
+			<?php $is_open = (bool) get_option( 'wos_survey_open' ); ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form wos-mt">
+				<input type="hidden" name="action" value="wos_survey"><input type="hidden" name="do" value="open"><input type="hidden" name="on" value="<?php echo $is_open ? '' : '1'; ?>"><?php wp_nonce_field( 'wos_survey' ); ?>
+				<p><strong>Open link (QR code, posts): <?php echo $is_open ? 'on' : 'off'; ?>.</strong> <span class="wos-muted"><?php echo $is_open ? 'Anyone with the link can start. Limits: ' . (int) WOS_SURVEY_OPEN_PER_HOUR . ' starts per hour per visitor, ' . (int) WOS_SURVEY_OPEN_PER_DAY . ' a day in all; answers faster than a minute are flagged and make no lead.' : 'Only invite codes work. Turn it on when the QR code goes out.'; ?></span></p>
+				<div class="wos-actions"><button class="wos-btn <?php echo $is_open ? 'is-ghost' : ''; ?>" type="submit" onclick="return confirm('<?php echo $is_open ? 'Turn the open link off?' : 'Turn the open link on? Anyone with the link can then take the survey.'; ?>');"><?php echo $is_open ? 'Turn off' : 'Turn on'; ?></button></div>
+			</form>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wos-form wos-mt">
 				<input type="hidden" name="action" value="wos_survey"><input type="hidden" name="do" value="origins"><?php wp_nonce_field( 'wos_survey' ); ?>
 				<label class="wos-field"><span>Sites allowed to post, one per line (* means any; staging only)</span><textarea name="origins" rows="3"><?php echo esc_textarea( implode( "\n", wos_survey_origins() ) ); ?></textarea></label>
