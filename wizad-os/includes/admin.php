@@ -3,7 +3,15 @@ defined( 'ABSPATH' ) || exit;
 
 add_action( 'admin_menu', function () {
 	add_menu_page( 'WIZAD OS', 'WIZAD OS', WOS_CAP, 'wizad-os', 'wos_render_dashboard', 'dashicons-chart-area', 2 );
-	add_submenu_page( 'wizad-os', 'Home', 'Home', WOS_CAP, 'wizad-os', 'wos_render_dashboard' );
+	$home = add_submenu_page( 'wizad-os', 'Home', 'Home', WOS_CAP, 'wizad-os', 'wos_render_dashboard' );
+	// The app is home now. The old dashboard (income, expenses, GST) stays one click away until Sprint D.
+	add_action( 'load-' . $home, function () {
+		if ( empty( $_GET['classic'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- read-only view switch.
+			wp_safe_redirect( wos_app_url() );
+			exit;
+		}
+	} );
+	add_submenu_page( 'wizad-os', 'Old dashboard', 'Old dashboard', WOS_CAP, 'admin.php?page=wizad-os&classic=1' );
 	add_submenu_page( 'wizad-os', 'Delivery board', 'Board', WOS_CAP, 'wos-board', 'wos_render_board' );
 	foreach ( array( 'clients', 'deals', 'projects' ) as $e ) {
 		$def = wos_entity( $e );
@@ -16,6 +24,11 @@ add_action( 'admin_menu', function () {
 		wos_render_entity_page( 'ledger' );
 	} );
 	add_submenu_page( 'wizad-os', 'Settings', 'Settings', WOS_CAP, 'wos-settings', 'wos_render_settings' );
+	$open = add_submenu_page( 'wizad-os', 'Open the app', 'Open the app →', WOS_CAP, 'wos-open-app', '__return_null' );
+	add_action( 'load-' . $open, function () {
+		wp_safe_redirect( wos_app_url() );
+		exit;
+	} );
 
 	// This install is only for WIZAD OS: hide the blog screens.
 	remove_menu_page( 'edit.php' );
@@ -33,17 +46,17 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	}
 } );
 
-/* Land on WIZAD OS after signing in, and from the old dashboard. */
+/* Land on the app after signing in, and from the old dashboard. */
 add_filter( 'login_redirect', function ( $to, $requested, $user ) {
 	if ( $user instanceof WP_User && user_can( $user, WOS_CAP ) && ( ! $requested || false !== strpos( $requested, 'wp-admin/' ) && false === strpos( $requested, 'page=' ) && false === strpos( $requested, 'profile.php' ) ) ) {
-		return wos_url( 'wizad-os' );
+		return wos_app_url();
 	}
 	return $to;
 }, 10, 3 );
 
 add_action( 'load-index.php', function () {
 	if ( current_user_can( WOS_CAP ) ) {
-		wp_safe_redirect( wos_url( 'wizad-os' ) );
+		wp_safe_redirect( wos_app_url() );
 		exit;
 	}
 } );

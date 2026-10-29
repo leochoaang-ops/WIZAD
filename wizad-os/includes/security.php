@@ -23,7 +23,7 @@ function wos_client_ip() {
 	return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 }
 
-/* Sign-in required everywhere except the plain home page, which the theme shows as a holding page. */
+/* Sign-in required everywhere except the plain home page, which the theme shows as a holding page. Signed-in users go to /app. */
 add_action( 'template_redirect', function () {
 	if ( ! is_user_logged_in() ) {
 		if ( is_front_page() && empty( $_GET ) ) { // phpcs:ignore WordPress.Security.NonceVerification
@@ -31,7 +31,11 @@ add_action( 'template_redirect', function () {
 		}
 		auth_redirect();
 	}
-	wp_safe_redirect( wos_url( 'wizad-os' ) );
+	// Signed in: the app at /app is the only front end (app.php serves it).
+	if ( null !== wos_app_path() ) {
+		return;
+	}
+	wp_safe_redirect( wos_app_url() );
 	exit;
 }, 0 );
 

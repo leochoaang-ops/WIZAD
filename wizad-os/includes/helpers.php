@@ -22,6 +22,17 @@ function wos_settings_defaults() {
 }
 
 function wos_setting( $key ) {
+	// Rates and tax moved to the dated numbers in 0.2.0 (see numbers.php).
+	$moved = array(
+		'gst_rate'      => 'gst_rate',
+		'fx_usd'        => 'fx_usd',
+		'fx_eur'        => 'fx_eur',
+		'payment_terms' => 'payment_terms',
+		'leo_rate'      => 'rate_lead_consultant',
+	);
+	if ( isset( $moved[ $key ] ) ) {
+		return wos_num( $moved[ $key ] );
+	}
 	$s = wp_parse_args( get_option( 'wos_settings', array() ), wos_settings_defaults() );
 	return isset( $s[ $key ] ) ? $s[ $key ] : null;
 }

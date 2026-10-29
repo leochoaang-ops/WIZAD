@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: WIZAD OS
- * Description: WIZAD's internal operating system: clients, deals, projects, Kanban, invoices and ledger. Built for a private install such as os.wizad.ca.
- * Version: 0.1.1
+ * Description: WIZAD's internal operating system (WOS), at /app: decisions, clients, sprints, time, content and money. Built for a private install such as os.wizad.ca.
+ * Version: 0.5.2
  * Requires at least: 6.4
  * Requires PHP: 7.4
  * Author: WIZAD
@@ -12,14 +12,15 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WOS_VERSION', '0.1.1' );
-define( 'WOS_DB_VERSION', '1' );
+define( 'WOS_VERSION', '0.5.2' );
+define( 'WOS_DB_VERSION', '7' );
 define( 'WOS_FILE', __FILE__ );
 define( 'WOS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WOS_URL', plugin_dir_url( __FILE__ ) );
 define( 'WOS_CAP', 'wos_manage' );
 
 require_once WOS_DIR . 'includes/helpers.php';
+require_once WOS_DIR . 'includes/numbers.php';
 require_once WOS_DIR . 'includes/schema.php';
 require_once WOS_DIR . 'includes/security.php';
 require_once WOS_DIR . 'includes/entities.php';
@@ -31,6 +32,14 @@ require_once WOS_DIR . 'includes/settings.php';
 require_once WOS_DIR . 'includes/export.php';
 require_once WOS_DIR . 'includes/seed.php';
 require_once WOS_DIR . 'includes/admin.php';
+require_once WOS_DIR . 'includes/decisions.php';
+require_once WOS_DIR . 'includes/leads.php';
+require_once WOS_DIR . 'includes/chat.php';
+require_once WOS_DIR . 'includes/demo.php';
+require_once WOS_DIR . 'includes/update.php';
+require_once WOS_DIR . 'includes/survey.php';
+require_once WOS_DIR . 'includes/app-leads.php';
+require_once WOS_DIR . 'includes/app.php';
 
 register_activation_hook( __FILE__, 'wos_activate' );
 
